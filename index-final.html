@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>資材管理アプリ（CORS解決版）</title>
+    <meta name="theme-color" content="#3B82F6">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* カスタムスタイル */
+        .material-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .material-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        .toggle-btn {
+            transition: all 0.3s ease;
+        }
+        .toggle-btn.in-stock {
+            background-color: #10B981;
+            color: white;
+        }
+        .toggle-btn.out-of-stock {
+            background-color: #EF4444;
+            color: white;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .loading-card {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        @media (max-width: 768px) {
+            .material-card {
+                min-height: 200px;
+            }
+        }
+        .offline {
+            filter: grayscale(0.3);
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 料金安心版の通知 -->
+    <div class="bg-green-600 text-white p-2 text-center text-sm">
+        🛡️ CORS解決版：直接ブラウザで開けます（料金安心）
+    </div>
+
+    <!-- ヘッダー -->
+    <header class="bg-blue-600 text-white p-4 shadow-lg">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">📦 資材管理</h1>
+            <button id="addBtn" class="bg-blue-500 hover:bg-blue-400 px-4 py-2 rounded-lg transition">
+                ➕ 新規追加
+            </button>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="max-w-6xl mx-auto p-4">
+        <!-- ローディング表示 -->
+        <div id="loading" class="text-center py-8">
+            <div class="animate-spin inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+            <p class="mt-2 text-gray-600">読み込み中...</p>
+        </div>
+
+        <!-- カード一覧 -->
+        <div id="materialsGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4 hidden">
+            <!-- 動的に生成 -->
+        </div>
+
+        <!-- 空状態 -->
+        <div id="emptyState" class="text-center py-16 hidden">
+            <div class="text-6xl mb-4">📦</div>
+            <h2 class="text-xl text-gray-600 mb-2">まだ資材が登録されていません</h2>
+            <p class="text-gray-500">「新規追加」ボタンから最初の資材を登録しましょう</p>
+        </div>
+    </main>
+
+    <!-- モーダル -->
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">新しい資材を追加</h2>
+                <button id="closeModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            
+            <form id="materialForm">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">資材名 *</label>
+                    <input type="text" id="materialName" required 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">写真（1MB以下）</label>
+                    <input type="file" id="materialPhoto" accept="image/*" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <p class="text-xs text-gray-500 mt-1">※画像は自動で圧縮されFirestoreに保存されます</p>
+                    <div id="imagePreview" class="mt-2 hidden">
+                        <img id="previewImg" class="w-full h-32 object-cover rounded-md">
+                    </div>
+                </div>
+                
+                <div class="flex gap-3">
+                    <button type="button" id="cancelBtn" 
+                            class="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition">
+                        キャンセル
+                    </button>
+                    <button type="submit" id="submitBtn" 
+                            class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">
+                        登録
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- オフライン表示 -->
+    <div id="offlineNotice" class="fixed bottom-4 right-4 bg-yellow-500 text-white px-4 py-2 rounded-lg shadow-lg hidden">
+        📡 オフライン中
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // 🔥 Firebase設定
+        const firebaseConfig = {
+            apiKey: "AIzaSyB0HvK_MEkCDPC1pZYHDdLOGFnFjn418j0",
+            authDomain: "material-manager-64552.firebaseapp.com",
+            projectId: "material-manager-64552",
+            storageBucket: "material-manager-64552.firebasestorage.app",
+            messagingSenderId: "1016308463887",
+            appId: "1:1016308463887:web:6c56b0dd89a58e9688e67a"
+        };
+
+        // Firebase初期化
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // DOM要素
+        const addBtn = document.getElementById('addBtn');
+        const modal = document.getElementById('modal');
+        const closeModal = document.getElementById('closeModal');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const materialForm = document.getElementById('materialForm');
+        const materialsGrid = document.getElementById('materialsGrid');
+        const loading = document.getElementById('loading');
+        const emptyState = document.getElementById('emptyState');
+        const offlineNotice = document.getElementById('offlineNotice');
+        const materialPhoto = document.getElementById('materialPhoto');
+        const imagePreview = document.getElementById('imagePreview');
+        const previewImg = document.getElementById('previewImg');
+
+        // 状態管理
+        let materials = [];
+        let isOnline = navigator.onLine;
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('📱 CORS解決版で初期化中...');
+            initApp();
+            setupEventListeners();
+            monitorNetworkStatus();
+        });
+
+        // アプリ初期化
+        function initApp() {
+            loadMaterials();
+        }
+
+        // イベントリスナー設定
+        function setupEventListeners() {
+            addBtn.addEventListener('click', openModal);
+            closeModal.addEventListener('click', closeModalHandler);
+            cancelBtn.addEventListener('click', closeModalHandler);
+            materialForm.addEventListener('submit', handleSubmit);
+            materialPhoto.addEventListener('change', handleImagePreview);
+            
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModalHandler();
+            });
+        }
+
+        // ネットワーク状態監視
+        function monitorNetworkStatus() {
+            window.addEventListener('online', () => {
+                isOnline = true;
+                offlineNotice.classList.add('hidden');
+                document.body.classList.remove('offline');
+                console.log('🌐 オンラインに復帰');
+            });
+            
+            window.addEventListener('offline', () => {
+                isOnline = false;
+                offlineNotice.classList.remove('hidden');
+                document.body.classList.add('offline');
+                console.log('📡 オフライン中');
+            });
+        }
+
+        // 資材データ読み込み（リアルタイム）
+        function loadMaterials() {
+            db.collection('materials')
+                .orderBy('updatedAt', 'desc')
+                .onSnapshot((snapshot) => {
+                    materials = [];
+                    snapshot.forEach((doc) => {
+                        materials.push({ id: doc.id, ...doc.data() });
+                    });
+                    
+                    renderMaterials();
+                    hideLoading();
+                    console.log('📊 データを読み込みました:', materials.length, '件');
+                }, (error) => {
+                    console.error('❌ データ読み込みエラー:', error);
+                    hideLoading();
+                    showError('データの読み込みに失敗しました: ' + error.message);
+                });
+        }
+
+        // 資材一覧表示
+        function renderMaterials() {
+            if (materials.length === 0) {
+                materialsGrid.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            
+            emptyState.classList.add('hidden');
+            materialsGrid.classList.remove('hidden');
+            
+            materialsGrid.innerHTML = materials.map(material => `
+                <div class="material-card bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="aspect-square bg-gray-200 relative">
+                        ${material.photoBase64 ? 
+                            `<img src="${material.photoBase64}" alt="${material.name}" class="w-full h-full object-cover">` :
+                            `<div class="w-full h-full flex items-center justify-center text-gray-400 text-4xl">📦</div>`
+                        }
+                    </div>
+                    <div class="p-3">
+                        <h3 class="font-semibold text-sm mb-2 truncate" title="${material.name}">
+                            ${material.name}
+                        </h3>
+                        <button 
+                            class="toggle-btn w-full py-2 px-3 rounded-md text-sm font-medium ${material.inStock ? 'in-stock' : 'out-of-stock'}"
+                            onclick="toggleStock('${material.id}', ${!material.inStock})"
+                        >
+                            ${material.inStock ? '✅ 在庫あり' : '❌ 在庫なし'}
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 在庫状態トグル
+        function toggleStock(materialId, newStock) {
+            if (!isOnline) {
+                showError('オフライン中は編集できません');
+                return;
+            }
+            
+            db.collection('materials').doc(materialId).update({
+                inStock: newStock,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                console.log(`📝 在庫状態を更新: ${materialId} -> ${newStock}`);
+            }).catch((error) => {
+                console.error('❌ 在庫更新エラー:', error);
+                showError('在庫状態の更新に失敗しました');
+            });
+        }
+
+        // モーダル開く
+        function openModal() {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.getElementById('materialName').focus();
+        }
+
+        // モーダル閉じる
+        function closeModalHandler() {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            materialForm.reset();
+            imagePreview.classList.add('hidden');
+        }
+
+        // 画像プレビュー
+        function handleImagePreview(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // ファイルサイズチェック（1MB制限）
+                if (file.size > 1024 * 1024) {
+                    showError('画像サイズは1MB以下にしてください');
+                    e.target.value = '';
+                    imagePreview.classList.add('hidden');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewImg.src = e.target.result;
+                    imagePreview.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                imagePreview.classList.add('hidden');
+            }
+        }
+
+        // フォーム送信処理
+        async function handleSubmit(e) {
+            e.preventDefault();
+            
+            if (!isOnline) {
+                showError('オフライン中は登録できません');
+                return;
+            }
+            
+            const name = document.getElementById('materialName').value.trim();
+            const photoFile = materialPhoto.files[0];
+            
+            if (!name) return;
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '登録中...';
+            
+            try {
+                let photoBase64 = '';
+                
+                // 画像処理（Base64エンコード）
+                if (photoFile) {
+                    console.log('📸 画像をリサイズ中...');
+                    const resizedFile = await resizeImage(photoFile, 800);
+                    photoBase64 = await fileToBase64(resizedFile);
+                }
+                
+                // Firestoreに保存
+                console.log('💾 Firestoreに保存中...');
+                await db.collection('materials').add({
+                    name,
+                    photoBase64,
+                    inStock: true,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                console.log('✅ 資材を登録しました:', name);
+                closeModalHandler();
+                
+            } catch (error) {
+                console.error('❌ 登録エラー:', error);
+                showError('資材の登録に失敗しました: ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '登録';
+            }
+        }
+
+        // 画像リサイズ（軽量化）
+        function resizeImage(file, maxWidth = 800) {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                
+                img.onload = () => {
+                    // アスペクト比を保持してリサイズ
+                    const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+                    canvas.width = img.width * ratio;
+                    canvas.height = img.height * ratio;
+                    
+                    // 画像を描画
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    // Blobに変換（圧縮率高め）
+                    canvas.toBlob(resolve, 'image/jpeg', 0.6);
+                };
+                
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        // ファイルをBase64に変換
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // ローディング非表示
+        function hideLoading() {
+            loading.classList.add('hidden');
+        }
+
+        // エラー表示
+        function showError(message) {
+            alert(`⚠️ ${message}`);
+        }
+
+        console.log('🛡️ CORS解決版で起動しました');
+    </script>
+</body>
+</html>
