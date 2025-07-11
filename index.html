@@ -3,29 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>資材管理アプリ（管理者機能付き）</title>
-    <meta name="theme-color" content="#3B82F6">
+    <title>資材管理システム（プロフェッショナル版）</title>
+    <meta name="theme-color" content="#1F2937">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* カスタムスタイル */
+        /* プロフェッショナルなカスタムスタイル */
         .material-card {
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.2s ease-in-out;
+            border: 1px solid #E5E7EB;
         }
         .material-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border-color: #9CA3AF;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
-        .toggle-btn {
-            transition: all 0.3s ease;
+        .quantity-control {
+            transition: all 0.2s ease-in-out;
         }
-        .toggle-btn.in-stock {
-            background-color: #10B981;
-            color: white;
+        .quantity-control:hover {
+            background-color: #F3F4F6;
         }
-        .toggle-btn.out-of-stock {
-            background-color: #EF4444;
-            color: white;
+        .quantity-input {
+            transition: all 0.2s ease-in-out;
+        }
+        .quantity-input:focus {
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
         }
         @keyframes pulse {
             0%, 100% { opacity: 1; }
@@ -34,100 +36,107 @@
         .loading-card {
             animation: pulse 1.5s ease-in-out infinite;
         }
-        @media (max-width: 768px) {
-            .material-card {
-                min-height: 200px;
-            }
-        }
-        .offline {
-            filter: grayscale(0.3);
-            opacity: 0.8;
-        }
-        /* カテゴリフィルタボタン */
         .category-filter {
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
+            transition: all 0.2s ease-in-out;
+            border: 1px solid #D1D5DB;
         }
         .category-filter.active {
-            transform: scale(1.05);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            background-color: #1F2937;
+            color: white;
+            border-color: #1F2937;
         }
-        .category-filter:hover {
-            transform: translateY(-2px);
+        .category-filter:hover:not(.active) {
+            border-color: #9CA3AF;
+            background-color: #F9FAFB;
         }
-        /* 管理者モード */
         .admin-mode {
-            background: linear-gradient(45deg, #ef4444, #dc2626);
+            background: linear-gradient(45deg, #DC2626, #B91C1C);
             animation: adminGlow 2s ease-in-out infinite alternate;
         }
         @keyframes adminGlow {
-            from { box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
-            to { box-shadow: 0 0 20px rgba(239, 68, 68, 0.8); }
+            from { box-shadow: 0 0 10px rgba(220, 38, 38, 0.3); }
+            to { box-shadow: 0 0 20px rgba(220, 38, 38, 0.5); }
         }
         .delete-btn {
-            background: #ef4444;
-            transition: all 0.3s ease;
+            background: #DC2626;
+            transition: all 0.2s ease-in-out;
         }
         .delete-btn:hover {
-            background: #dc2626;
+            background: #B91C1C;
             transform: scale(1.05);
+        }
+        .stock-badge {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Segoe UI Mono', Consolas, 'Courier New', monospace;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+        .system-font {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
         }
     </style>
 </head>
-<body class="bg-gray-50">
-    <!-- 管理者機能付きの通知 -->
-    <div class="bg-red-600 text-white p-2 text-center text-sm">
-        🔐 管理者機能付きバージョン：削除機能・パスワード認証
+<body class="bg-gray-50 system-font">
+    <!-- システム情報バー -->
+    <div class="bg-slate-800 text-white p-2 text-center text-sm font-medium">
+        🏢 資材管理システム v2.0 - プロフェッショナル版 | 在庫個数管理・管理者機能搭載
     </div>
 
     <!-- ヘッダー -->
-    <header class="bg-blue-600 text-white p-4 shadow-lg">
-        <div class="max-w-6xl mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold">📦 資材管理</h1>
-            <div class="flex gap-2">
-                <!-- 管理者モード表示 -->
-                <div id="adminStatus" class="hidden items-center gap-2 bg-red-500 px-3 py-1 rounded-lg text-sm">
-                    👤 管理者モード
-                    <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 px-2 py-1 rounded text-xs">
-                        ログアウト
+    <header class="bg-white border-b-2 border-gray-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <h1 class="text-2xl font-bold text-gray-900">📊 資材管理システム</h1>
+                    <div class="text-sm text-gray-500">Material Management System</div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <!-- 管理者モード表示 -->
+                    <div id="adminStatus" class="hidden items-center space-x-2 bg-red-600 text-white px-3 py-1.5 rounded-md text-sm font-medium">
+                        <span>👤 Administrator Mode</span>
+                        <button id="logoutBtn" class="bg-red-700 hover:bg-red-800 px-2 py-1 rounded text-xs transition">
+                            Logout
+                        </button>
+                    </div>
+                    <!-- 管理者ログインボタン -->
+                    <button id="adminBtn" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-md transition font-medium text-sm">
+                        ⚙️ Admin
+                    </button>
+                    <button id="addBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition font-medium">
+                        ➕ 新規登録
                     </button>
                 </div>
-                <!-- 管理者ログインボタン -->
-                <button id="adminBtn" class="bg-yellow-600 hover:bg-yellow-500 px-3 py-2 rounded-lg transition text-sm">
-                    ⚙️ 管理者
-                </button>
-                <button id="addBtn" class="bg-blue-500 hover:bg-blue-400 px-4 py-2 rounded-lg transition">
-                    ➕ 新規追加
-                </button>
             </div>
         </div>
     </header>
 
     <!-- カテゴリフィルタ -->
-    <div class="bg-white shadow-sm border-b">
-        <div class="max-w-6xl mx-auto p-4">
+    <div class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-6 py-4">
+            <div class="flex items-center space-x-2 mb-2">
+                <span class="text-sm font-medium text-gray-700">カテゴリフィルタ:</span>
+            </div>
             <div class="flex flex-wrap gap-2">
-                <button class="category-filter active px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-800" 
+                <button class="category-filter active px-4 py-2 rounded-md text-sm font-medium bg-gray-100 text-gray-800" 
                         data-category="all">
                     📋 すべて
                 </button>
-                <button class="category-filter px-4 py-2 rounded-full text-sm font-medium bg-blue-100 text-blue-800" 
+                <button class="category-filter px-4 py-2 rounded-md text-sm font-medium bg-white text-gray-700" 
                         data-category="工具類">
                     🔧 工具類
                 </button>
-                <button class="category-filter px-4 py-2 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800" 
+                <button class="category-filter px-4 py-2 rounded-md text-sm font-medium bg-white text-gray-700" 
                         data-category="電気部品">
                     ⚡ 電気部品
                 </button>
-                <button class="category-filter px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800" 
+                <button class="category-filter px-4 py-2 rounded-md text-sm font-medium bg-white text-gray-700" 
                         data-category="建材">
                     🏗️ 建材
                 </button>
-                <button class="category-filter px-4 py-2 rounded-full text-sm font-medium bg-orange-100 text-orange-800" 
+                <button class="category-filter px-4 py-2 rounded-md text-sm font-medium bg-white text-gray-700" 
                         data-category="塗料・接着剤">
                     🎨 塗料・接着剤
                 </button>
-                <button class="category-filter px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-600" 
+                <button class="category-filter px-4 py-2 rounded-md text-sm font-medium bg-white text-gray-700" 
                         data-category="その他">
                     📦 その他
                 </button>
@@ -136,46 +145,68 @@
     </div>
 
     <!-- メインコンテンツ -->
-    <main class="max-w-6xl mx-auto p-4">
+    <main class="max-w-7xl mx-auto px-6 py-6">
         <!-- ローディング表示 -->
-        <div id="loading" class="text-center py-8">
-            <div class="animate-spin inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
-            <p class="mt-2 text-gray-600">読み込み中...</p>
+        <div id="loading" class="text-center py-12">
+            <div class="animate-spin inline-block w-8 h-8 border-4 border-gray-300 border-t-blue-600 rounded-full"></div>
+            <p class="mt-4 text-gray-600 font-medium">データを読み込み中...</p>
+        </div>
+
+        <!-- 統計情報 -->
+        <div id="statsBar" class="mb-6 hidden">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <div class="text-sm font-medium text-gray-500">総アイテム数</div>
+                    <div id="totalItems" class="text-2xl font-bold text-gray-900">0</div>
+                </div>
+                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <div class="text-sm font-medium text-gray-500">在庫あり</div>
+                    <div id="inStockItems" class="text-2xl font-bold text-green-600">0</div>
+                </div>
+                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <div class="text-sm font-medium text-gray-500">在庫なし</div>
+                    <div id="outOfStockItems" class="text-2xl font-bold text-red-600">0</div>
+                </div>
+                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <div class="text-sm font-medium text-gray-500">総在庫数</div>
+                    <div id="totalQuantity" class="text-2xl font-bold text-blue-600">0</div>
+                </div>
+            </div>
         </div>
 
         <!-- カード一覧 -->
-        <div id="materialsGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4 hidden">
+        <div id="materialsGrid" class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-4 hidden">
             <!-- 動的に生成 -->
         </div>
 
         <!-- 空状態 -->
         <div id="emptyState" class="text-center py-16 hidden">
-            <div class="text-6xl mb-4">📦</div>
-            <h2 class="text-xl text-gray-600 mb-2">まだ資材が登録されていません</h2>
-            <p class="text-gray-500">「新規追加」ボタンから最初の資材を登録しましょう</p>
+            <div class="text-6xl mb-6">📊</div>
+            <h2 class="text-xl font-semibold text-gray-900 mb-2">データがありません</h2>
+            <p class="text-gray-600">「新規登録」ボタンから最初の資材を登録してください</p>
         </div>
     </main>
 
     <!-- 登録モーダル -->
     <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold">新しい資材を追加</h2>
-                <button id="closeModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">新規資材登録</h2>
+                <button id="closeModal" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl">&times;</button>
             </div>
             
-            <form id="materialForm">
+            <form id="materialForm" class="px-6 py-4">
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-2">資材名 *</label>
                     <input type="text" id="materialName" required 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
 
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-2">カテゴリ *</label>
                     <select id="materialCategory" required 
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="">カテゴリを選択してください</option>
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">カテゴリを選択</option>
                         <option value="工具類">🔧 工具類</option>
                         <option value="電気部品">⚡ 電気部品</option>
                         <option value="建材">🏗️ 建材</option>
@@ -183,24 +214,31 @@
                         <option value="その他">📦 その他</option>
                     </select>
                 </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">初期在庫数 *</label>
+                    <input type="number" id="materialQuantity" required min="0" value="1"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <p class="text-xs text-gray-500 mt-1">0を指定すると在庫なし状態で登録されます</p>
+                </div>
                 
                 <div class="mb-6">
                     <label class="block text-sm font-medium text-gray-700 mb-2">写真（1MB以下）</label>
                     <input type="file" id="materialPhoto" accept="image/*" 
                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <p class="text-xs text-gray-500 mt-1">※画像は自動で圧縮されFirestoreに保存されます</p>
-                    <div id="imagePreview" class="mt-2 hidden">
-                        <img id="previewImg" class="w-full h-32 object-cover rounded-md">
+                    <p class="text-xs text-gray-500 mt-1">※画像は自動で最適化されます</p>
+                    <div id="imagePreview" class="mt-3 hidden">
+                        <img id="previewImg" class="w-full h-32 object-cover rounded-md border">
                     </div>
                 </div>
                 
-                <div class="flex gap-3">
+                <div class="flex space-x-3 pt-4 border-t border-gray-200">
                     <button type="button" id="cancelBtn" 
-                            class="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition">
+                            class="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition font-medium">
                         キャンセル
                     </button>
                     <button type="submit" id="submitBtn" 
-                            class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">
+                            class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition font-medium">
                         登録
                     </button>
                 </div>
@@ -210,33 +248,33 @@
 
     <!-- 管理者ログインモーダル -->
     <div id="adminModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold text-red-600">🔐 管理者認証</h2>
-                <button id="closeAdminModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-red-600">🔐 管理者認証</h2>
+                <button id="closeAdminModal" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl">&times;</button>
             </div>
             
-            <form id="adminForm">
+            <form id="adminForm" class="px-6 py-4">
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-2">管理者パスワード</label>
                     <input type="password" id="adminPassword" required 
                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                           placeholder="パスワードを入力してください">
+                           placeholder="パスワードを入力">
                 </div>
 
-                <div class="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">
-                    <p class="text-sm text-yellow-800">
-                        ⚠️ 管理者モードでは資材の削除が可能になります。慎重に操作してください。
+                <div class="bg-amber-50 border border-amber-200 rounded-md p-3 mb-4">
+                    <p class="text-sm text-amber-800">
+                        ⚠️ 管理者モードでは資材の削除が可能になります
                     </p>
                 </div>
                 
-                <div class="flex gap-3">
+                <div class="flex space-x-3 pt-4 border-t border-gray-200">
                     <button type="button" id="cancelAdminBtn" 
-                            class="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition">
+                            class="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition font-medium">
                         キャンセル
                     </button>
                     <button type="submit" id="loginBtn" 
-                            class="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition">
+                            class="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition font-medium">
                         ログイン
                     </button>
                 </div>
@@ -246,42 +284,42 @@
 
     <!-- 削除確認モーダル -->
     <div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold text-red-600">🗑️ 削除確認</h2>
-                <button id="closeDeleteModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-red-600">🗑️ 削除確認</h2>
+                <button id="closeDeleteModal" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl">&times;</button>
             </div>
             
-            <div class="mb-4">
-                <p class="text-gray-700 mb-2">以下の資材を削除しますか？</p>
-                <div class="bg-gray-50 p-3 rounded-md">
+            <div class="px-6 py-4">
+                <p class="text-gray-700 mb-3">以下の資材を削除しますか？</p>
+                <div class="bg-gray-50 border border-gray-200 rounded-md p-3 mb-4">
                     <p id="deleteTargetName" class="font-medium text-gray-900"></p>
                     <p id="deleteTargetCategory" class="text-sm text-gray-600"></p>
                 </div>
-            </div>
 
-            <div class="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
-                <p class="text-sm text-red-800">
-                    ⚠️ この操作は取り消せません。削除された資材は復元できません。
-                </p>
-            </div>
-            
-            <div class="flex gap-3">
-                <button type="button" id="cancelDeleteBtn" 
-                        class="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition">
-                    キャンセル
-                </button>
-                <button type="button" id="confirmDeleteBtn" 
-                        class="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition">
-                    削除する
-                </button>
+                <div class="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
+                    <p class="text-sm text-red-800">
+                        ⚠️ この操作は取り消せません
+                    </p>
+                </div>
+                
+                <div class="flex space-x-3 pt-4 border-t border-gray-200">
+                    <button type="button" id="cancelDeleteBtn" 
+                            class="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition font-medium">
+                        キャンセル
+                    </button>
+                    <button type="button" id="confirmDeleteBtn" 
+                            class="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition font-medium">
+                        削除する
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- オフライン表示 -->
-    <div id="offlineNotice" class="fixed bottom-4 right-4 bg-yellow-500 text-white px-4 py-2 rounded-lg shadow-lg hidden">
-        📡 オフライン中
+    <div id="offlineNotice" class="fixed bottom-4 right-4 bg-amber-500 text-white px-4 py-2 rounded-lg shadow-lg hidden font-medium">
+        📡 オフライン
     </div>
 
     <!-- Firebase SDK -->
@@ -325,6 +363,11 @@
         const materialsGrid = document.getElementById('materialsGrid');
         const loading = document.getElementById('loading');
         const emptyState = document.getElementById('emptyState');
+        const statsBar = document.getElementById('statsBar');
+        const totalItems = document.getElementById('totalItems');
+        const inStockItems = document.getElementById('inStockItems');
+        const outOfStockItems = document.getElementById('outOfStockItems');
+        const totalQuantity = document.getElementById('totalQuantity');
         const offlineNotice = document.getElementById('offlineNotice');
         const materialPhoto = document.getElementById('materialPhoto');
         const imagePreview = document.getElementById('imagePreview');
@@ -360,7 +403,7 @@
 
         // 初期化
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('🔐 管理者機能付きバージョンで初期化中...');
+            console.log('🏢 プロフェッショナル版で初期化中...');
             initApp();
             setupEventListeners();
             monitorNetworkStatus();
@@ -403,16 +446,15 @@
             cancelDeleteBtn.addEventListener('click', closeDeleteModalHandler);
             confirmDeleteBtn.addEventListener('click', confirmDelete);
             
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) closeModalHandler();
-            });
-
-            adminModal.addEventListener('click', (e) => {
-                if (e.target === adminModal) closeAdminModalHandler();
-            });
-
-            deleteModal.addEventListener('click', (e) => {
-                if (e.target === deleteModal) closeDeleteModalHandler();
+            // モーダル外クリック
+            [modal, adminModal, deleteModal].forEach(modalEl => {
+                modalEl.addEventListener('click', (e) => {
+                    if (e.target === modalEl) {
+                        if (modalEl === modal) closeModalHandler();
+                        else if (modalEl === adminModal) closeAdminModalHandler();
+                        else if (modalEl === deleteModal) closeDeleteModalHandler();
+                    }
+                });
             });
         }
 
@@ -421,14 +463,12 @@
             window.addEventListener('online', () => {
                 isOnline = true;
                 offlineNotice.classList.add('hidden');
-                document.body.classList.remove('offline');
                 console.log('🌐 オンラインに復帰');
             });
             
             window.addEventListener('offline', () => {
                 isOnline = false;
                 offlineNotice.classList.remove('hidden');
-                document.body.classList.add('offline');
                 console.log('📡 オフライン中');
             });
         }
@@ -441,12 +481,19 @@
                     materials = [];
                     snapshot.forEach((doc) => {
                         const data = doc.data();
+                        
+                        // データ移行：inStock -> quantity
+                        if (data.inStock !== undefined && data.quantity === undefined) {
+                            data.quantity = data.inStock ? 1 : 0;
+                        }
                         if (!data.category) {
                             data.category = 'その他';
                         }
+                        
                         materials.push({ id: doc.id, ...data });
                     });
                     
+                    updateStats();
                     renderMaterials();
                     hideLoading();
                     console.log('📊 データを読み込みました:', materials.length, '件');
@@ -457,9 +504,32 @@
                 });
         }
 
+        // 統計情報更新
+        function updateStats() {
+            let filteredMaterials = materials;
+            if (currentCategory !== 'all') {
+                filteredMaterials = materials.filter(material => material.category === currentCategory);
+            }
+
+            const total = filteredMaterials.length;
+            const inStock = filteredMaterials.filter(m => (m.quantity || 0) > 0).length;
+            const outOfStock = filteredMaterials.filter(m => (m.quantity || 0) === 0).length;
+            const totalQty = filteredMaterials.reduce((sum, m) => sum + (m.quantity || 0), 0);
+
+            totalItems.textContent = total;
+            inStockItems.textContent = inStock;
+            outOfStockItems.textContent = outOfStock;
+            totalQuantity.textContent = totalQty;
+
+            if (total > 0) {
+                statsBar.classList.remove('hidden');
+            }
+        }
+
         // カテゴリフィルタ
         function filterByCategory(category) {
             currentCategory = category;
+            updateStats();
             renderMaterials();
         }
 
@@ -478,11 +548,11 @@
                 const emptyDesc = emptyState.querySelector('p');
                 
                 if (currentCategory === 'all') {
-                    emptyTitle.textContent = 'まだ資材が登録されていません';
-                    emptyDesc.textContent = '「新規追加」ボタンから最初の資材を登録しましょう';
+                    emptyTitle.textContent = 'データがありません';
+                    emptyDesc.textContent = '「新規登録」ボタンから最初の資材を登録してください';
                 } else {
-                    emptyTitle.textContent = `${currentCategory}の資材がありません`;
-                    emptyDesc.textContent = 'このカテゴリの資材を追加するか、他のカテゴリを選択してください';
+                    emptyTitle.textContent = `${currentCategory}のデータがありません`;
+                    emptyDesc.textContent = 'このカテゴリに資材を追加するか、他のカテゴリを選択してください';
                 }
                 return;
             }
@@ -492,58 +562,91 @@
             
             materialsGrid.innerHTML = filteredMaterials.map(material => {
                 const categoryInfo = categories[material.category] || categories['その他'];
-                const colorClass = getCategoryColorClass(categoryInfo.color);
+                const quantity = material.quantity || 0;
+                const isInStock = quantity > 0;
                 
                 return `
-                    <div class="material-card bg-white rounded-lg shadow-md overflow-hidden">
-                        <div class="aspect-square bg-gray-200 relative">
+                    <div class="material-card bg-white rounded-lg overflow-hidden">
+                        <div class="aspect-square bg-gray-100 relative">
                             ${material.photoBase64 ? 
                                 `<img src="${material.photoBase64}" alt="${material.name}" class="w-full h-full object-cover">` :
                                 `<div class="w-full h-full flex items-center justify-center text-gray-400 text-4xl">${categoryInfo.emoji}</div>`
                             }
                             <!-- カテゴリバッジ -->
                             <div class="absolute top-2 left-2">
-                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${colorClass}">
+                                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-white text-gray-700 border">
                                     ${categoryInfo.emoji} ${material.category}
                                 </span>
                             </div>
                             <!-- 削除ボタン（管理者モードのみ） -->
                             ${isAdminMode ? `
                                 <div class="absolute top-2 right-2">
-                                    <button class="delete-btn text-white px-2 py-1 rounded-full text-xs font-medium hover:scale-105 transition"
+                                    <button class="delete-btn text-white px-2 py-1 rounded text-xs font-medium hover:scale-105 transition"
                                             onclick="openDeleteModal('${material.id}', '${material.name}', '${material.category}')">
                                         🗑️
                                     </button>
                                 </div>
                             ` : ''}
                         </div>
-                        <div class="p-3">
-                            <h3 class="font-semibold text-sm mb-2 truncate" title="${material.name}">
+                        <div class="p-4">
+                            <h3 class="font-semibold text-sm text-gray-900 mb-3 truncate" title="${material.name}">
                                 ${material.name}
                             </h3>
-                            <button 
-                                class="toggle-btn w-full py-2 px-3 rounded-md text-sm font-medium ${material.inStock ? 'in-stock' : 'out-of-stock'}"
-                                onclick="toggleStock('${material.id}', ${!material.inStock})"
-                            >
-                                ${material.inStock ? '✅ 在庫あり' : '❌ 在庫なし'}
-                            </button>
+                            
+                            <!-- 在庫数表示・編集 -->
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-medium text-gray-500">在庫数</span>
+                                    <span class="stock-badge text-sm px-2 py-1 rounded ${isInStock ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                        ${quantity} 個
+                                    </span>
+                                </div>
+                                
+                                <div class="flex items-center space-x-1">
+                                    <button class="quantity-control w-8 h-8 flex items-center justify-center border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50"
+                                            onclick="updateQuantity('${material.id}', ${Math.max(0, quantity - 1)})">
+                                        −
+                                    </button>
+                                    <input type="number" min="0" value="${quantity}" 
+                                           class="quantity-input flex-1 h-8 px-2 text-center border border-gray-300 rounded-md text-sm"
+                                           onchange="updateQuantity('${material.id}', parseInt(this.value) || 0)"
+                                           onclick="this.select()">
+                                    <button class="quantity-control w-8 h-8 flex items-center justify-center border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50"
+                                            onclick="updateQuantity('${material.id}', ${quantity + 1})">
+                                        +
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `;
             }).join('');
         }
 
-        // カテゴリ色クラス取得
-        function getCategoryColorClass(color) {
-            const colorMap = {
-                'blue': 'bg-blue-100 text-blue-800',
-                'yellow': 'bg-yellow-100 text-yellow-800',
-                'green': 'bg-green-100 text-green-800',
-                'orange': 'bg-orange-100 text-orange-800',
-                'gray': 'bg-gray-100 text-gray-600'
-            };
-            return colorMap[color] || colorMap['gray'];
-        }
+        // 在庫数更新
+        window.updateQuantity = function(materialId, newQuantity) {
+            if (!isOnline) {
+                showError('オフライン中は編集できません');
+                return;
+            }
+
+            if (newQuantity < 0) newQuantity = 0;
+
+            db.collection('materials').doc(materialId).update({
+                quantity: newQuantity,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                console.log(`📝 在庫数を更新: ${materialId} -> ${newQuantity}`);
+                
+                // 管理者モードの場合はセッション延長
+                if (isAdminMode) {
+                    setAdminTimeout();
+                }
+            }).catch((error) => {
+                console.error('❌ 在庫更新エラー:', error);
+                showError('在庫数の更新に失敗しました');
+            });
+        };
 
         // 管理者ログイン
         function handleAdminLogin(e) {
@@ -653,29 +756,6 @@
                 });
         }
 
-        // 在庫状態トグル
-        function toggleStock(materialId, newStock) {
-            if (!isOnline) {
-                showError('オフライン中は編集できません');
-                return;
-            }
-            
-            db.collection('materials').doc(materialId).update({
-                inStock: newStock,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            }).then(() => {
-                console.log(`📝 在庫状態を更新: ${materialId} -> ${newStock}`);
-                
-                // 管理者モードの場合はセッション延長
-                if (isAdminMode) {
-                    setAdminTimeout();
-                }
-            }).catch((error) => {
-                console.error('❌ 在庫更新エラー:', error);
-                showError('在庫状態の更新に失敗しました');
-            });
-        }
-
         // モーダル開閉処理
         function openModal() {
             modal.classList.remove('hidden');
@@ -741,6 +821,7 @@
             
             const name = document.getElementById('materialName').value.trim();
             const category = document.getElementById('materialCategory').value;
+            const quantity = parseInt(document.getElementById('materialQuantity').value) || 0;
             const photoFile = materialPhoto.files[0];
             
             if (!name || !category) return;
@@ -762,13 +843,13 @@
                 await db.collection('materials').add({
                     name,
                     category,
+                    quantity,
                     photoBase64,
-                    inStock: true,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
-                console.log('✅ 資材を登録しました:', name, `(${category})`);
+                console.log('✅ 資材を登録しました:', name, `(${category}, ${quantity}個)`);
                 closeModalHandler();
                 showSuccess(`「${name}」を登録しました`);
                 
@@ -799,7 +880,7 @@
                     canvas.height = img.height * ratio;
                     
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    canvas.toBlob(resolve, 'image/jpeg', 0.6);
+                    canvas.toBlob(resolve, 'image/jpeg', 0.7);
                 };
                 
                 img.src = URL.createObjectURL(file);
@@ -833,7 +914,7 @@
         function showMessage(message, type) {
             const toast = document.createElement('div');
             const bgColor = type === 'error' ? 'bg-red-600' : 'bg-green-600';
-            toast.className = `fixed bottom-4 left-4 ${bgColor} text-white px-4 py-2 rounded-lg shadow-lg z-50`;
+            toast.className = `fixed bottom-4 left-4 ${bgColor} text-white px-4 py-2 rounded-lg shadow-lg z-50 font-medium`;
             toast.textContent = message;
             document.body.appendChild(toast);
             
@@ -842,10 +923,7 @@
             }, 3000);
         }
 
-        // グローバル関数の登録
-        window.toggleStock = toggleStock;
-
-        console.log('🔐 管理者機能付きバージョンで起動しました');
+        console.log('🏢 プロフェッショナル版で起動しました');
     </script>
 </body>
 </html>
