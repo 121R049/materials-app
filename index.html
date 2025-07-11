@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>資材管理アプリ（CORS解決版）</title>
+    <title>資材管理アプリ（管理者機能付き）</title>
     <meta name="theme-color" content="#3B82F6">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -43,23 +43,97 @@
             filter: grayscale(0.3);
             opacity: 0.8;
         }
+        /* カテゴリフィルタボタン */
+        .category-filter {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        .category-filter.active {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .category-filter:hover {
+            transform: translateY(-2px);
+        }
+        /* 管理者モード */
+        .admin-mode {
+            background: linear-gradient(45deg, #ef4444, #dc2626);
+            animation: adminGlow 2s ease-in-out infinite alternate;
+        }
+        @keyframes adminGlow {
+            from { box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
+            to { box-shadow: 0 0 20px rgba(239, 68, 68, 0.8); }
+        }
+        .delete-btn {
+            background: #ef4444;
+            transition: all 0.3s ease;
+        }
+        .delete-btn:hover {
+            background: #dc2626;
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body class="bg-gray-50">
-    <!-- 料金安心版の通知 -->
-    <div class="bg-green-600 text-white p-2 text-center text-sm">
-        🛡️ CORS解決版：直接ブラウザで開けます（料金安心）
+    <!-- 管理者機能付きの通知 -->
+    <div class="bg-red-600 text-white p-2 text-center text-sm">
+        🔐 管理者機能付きバージョン：削除機能・パスワード認証
     </div>
 
     <!-- ヘッダー -->
     <header class="bg-blue-600 text-white p-4 shadow-lg">
         <div class="max-w-6xl mx-auto flex justify-between items-center">
             <h1 class="text-2xl font-bold">📦 資材管理</h1>
-            <button id="addBtn" class="bg-blue-500 hover:bg-blue-400 px-4 py-2 rounded-lg transition">
-                ➕ 新規追加
-            </button>
+            <div class="flex gap-2">
+                <!-- 管理者モード表示 -->
+                <div id="adminStatus" class="hidden items-center gap-2 bg-red-500 px-3 py-1 rounded-lg text-sm">
+                    👤 管理者モード
+                    <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 px-2 py-1 rounded text-xs">
+                        ログアウト
+                    </button>
+                </div>
+                <!-- 管理者ログインボタン -->
+                <button id="adminBtn" class="bg-yellow-600 hover:bg-yellow-500 px-3 py-2 rounded-lg transition text-sm">
+                    ⚙️ 管理者
+                </button>
+                <button id="addBtn" class="bg-blue-500 hover:bg-blue-400 px-4 py-2 rounded-lg transition">
+                    ➕ 新規追加
+                </button>
+            </div>
         </div>
     </header>
+
+    <!-- カテゴリフィルタ -->
+    <div class="bg-white shadow-sm border-b">
+        <div class="max-w-6xl mx-auto p-4">
+            <div class="flex flex-wrap gap-2">
+                <button class="category-filter active px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-800" 
+                        data-category="all">
+                    📋 すべて
+                </button>
+                <button class="category-filter px-4 py-2 rounded-full text-sm font-medium bg-blue-100 text-blue-800" 
+                        data-category="工具類">
+                    🔧 工具類
+                </button>
+                <button class="category-filter px-4 py-2 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800" 
+                        data-category="電気部品">
+                    ⚡ 電気部品
+                </button>
+                <button class="category-filter px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800" 
+                        data-category="建材">
+                    🏗️ 建材
+                </button>
+                <button class="category-filter px-4 py-2 rounded-full text-sm font-medium bg-orange-100 text-orange-800" 
+                        data-category="塗料・接着剤">
+                    🎨 塗料・接着剤
+                </button>
+                <button class="category-filter px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-600" 
+                        data-category="その他">
+                    📦 その他
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- メインコンテンツ -->
     <main class="max-w-6xl mx-auto p-4">
@@ -82,7 +156,7 @@
         </div>
     </main>
 
-    <!-- モーダル -->
+    <!-- 登録モーダル -->
     <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
         <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4">
             <div class="flex justify-between items-center mb-4">
@@ -95,6 +169,19 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">資材名 *</label>
                     <input type="text" id="materialName" required 
                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">カテゴリ *</label>
+                    <select id="materialCategory" required 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">カテゴリを選択してください</option>
+                        <option value="工具類">🔧 工具類</option>
+                        <option value="電気部品">⚡ 電気部品</option>
+                        <option value="建材">🏗️ 建材</option>
+                        <option value="塗料・接着剤">🎨 塗料・接着剤</option>
+                        <option value="その他">📦 その他</option>
+                    </select>
                 </div>
                 
                 <div class="mb-6">
@@ -118,6 +205,77 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- 管理者ログインモーダル -->
+    <div id="adminModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-red-600">🔐 管理者認証</h2>
+                <button id="closeAdminModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            
+            <form id="adminForm">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">管理者パスワード</label>
+                    <input type="password" id="adminPassword" required 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                           placeholder="パスワードを入力してください">
+                </div>
+
+                <div class="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">
+                    <p class="text-sm text-yellow-800">
+                        ⚠️ 管理者モードでは資材の削除が可能になります。慎重に操作してください。
+                    </p>
+                </div>
+                
+                <div class="flex gap-3">
+                    <button type="button" id="cancelAdminBtn" 
+                            class="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition">
+                        キャンセル
+                    </button>
+                    <button type="submit" id="loginBtn" 
+                            class="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition">
+                        ログイン
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 削除確認モーダル -->
+    <div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-red-600">🗑️ 削除確認</h2>
+                <button id="closeDeleteModal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            
+            <div class="mb-4">
+                <p class="text-gray-700 mb-2">以下の資材を削除しますか？</p>
+                <div class="bg-gray-50 p-3 rounded-md">
+                    <p id="deleteTargetName" class="font-medium text-gray-900"></p>
+                    <p id="deleteTargetCategory" class="text-sm text-gray-600"></p>
+                </div>
+            </div>
+
+            <div class="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
+                <p class="text-sm text-red-800">
+                    ⚠️ この操作は取り消せません。削除された資材は復元できません。
+                </p>
+            </div>
+            
+            <div class="flex gap-3">
+                <button type="button" id="cancelDeleteBtn" 
+                        class="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition">
+                    キャンセル
+                </button>
+                <button type="button" id="confirmDeleteBtn" 
+                        class="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition">
+                    削除する
+                </button>
+            </div>
         </div>
     </div>
 
@@ -145,6 +303,19 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        // 管理者設定
+        const ADMIN_PASSWORD = "1120";
+        const ADMIN_SESSION_TIMEOUT = 10 * 60 * 1000; // 10分
+
+        // カテゴリ設定
+        const categories = {
+            '工具類': { emoji: '🔧', color: 'blue' },
+            '電気部品': { emoji: '⚡', color: 'yellow' },
+            '建材': { emoji: '🏗️', color: 'green' },
+            '塗料・接着剤': { emoji: '🎨', color: 'orange' },
+            'その他': { emoji: '📦', color: 'gray' }
+        };
+
         // DOM要素
         const addBtn = document.getElementById('addBtn');
         const modal = document.getElementById('modal');
@@ -158,14 +329,38 @@
         const materialPhoto = document.getElementById('materialPhoto');
         const imagePreview = document.getElementById('imagePreview');
         const previewImg = document.getElementById('previewImg');
+        const categoryButtons = document.querySelectorAll('.category-filter');
+
+        // 管理者機能DOM要素
+        const adminBtn = document.getElementById('adminBtn');
+        const adminModal = document.getElementById('adminModal');
+        const closeAdminModal = document.getElementById('closeAdminModal');
+        const cancelAdminBtn = document.getElementById('cancelAdminBtn');
+        const adminForm = document.getElementById('adminForm');
+        const adminPassword = document.getElementById('adminPassword');
+        const loginBtn = document.getElementById('loginBtn');
+        const adminStatus = document.getElementById('adminStatus');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        // 削除機能DOM要素
+        const deleteModal = document.getElementById('deleteModal');
+        const closeDeleteModal = document.getElementById('closeDeleteModal');
+        const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+        const deleteTargetName = document.getElementById('deleteTargetName');
+        const deleteTargetCategory = document.getElementById('deleteTargetCategory');
 
         // 状態管理
         let materials = [];
         let isOnline = navigator.onLine;
+        let currentCategory = 'all';
+        let isAdminMode = false;
+        let adminTimeout = null;
+        let materialToDelete = null;
 
         // 初期化
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('📱 CORS解決版で初期化中...');
+            console.log('🔐 管理者機能付きバージョンで初期化中...');
             initApp();
             setupEventListeners();
             monitorNetworkStatus();
@@ -178,14 +373,46 @@
 
         // イベントリスナー設定
         function setupEventListeners() {
+            // 基本機能
             addBtn.addEventListener('click', openModal);
             closeModal.addEventListener('click', closeModalHandler);
             cancelBtn.addEventListener('click', closeModalHandler);
             materialForm.addEventListener('submit', handleSubmit);
             materialPhoto.addEventListener('change', handleImagePreview);
             
+            // カテゴリフィルタのイベント
+            categoryButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const category = button.dataset.category;
+                    filterByCategory(category);
+                    
+                    categoryButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                });
+            });
+
+            // 管理者機能
+            adminBtn.addEventListener('click', openAdminModal);
+            closeAdminModal.addEventListener('click', closeAdminModalHandler);
+            cancelAdminBtn.addEventListener('click', closeAdminModalHandler);
+            adminForm.addEventListener('submit', handleAdminLogin);
+            logoutBtn.addEventListener('click', logout);
+
+            // 削除機能
+            closeDeleteModal.addEventListener('click', closeDeleteModalHandler);
+            cancelDeleteBtn.addEventListener('click', closeDeleteModalHandler);
+            confirmDeleteBtn.addEventListener('click', confirmDelete);
+            
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) closeModalHandler();
+            });
+
+            adminModal.addEventListener('click', (e) => {
+                if (e.target === adminModal) closeAdminModalHandler();
+            });
+
+            deleteModal.addEventListener('click', (e) => {
+                if (e.target === deleteModal) closeDeleteModalHandler();
             });
         }
 
@@ -213,7 +440,11 @@
                 .onSnapshot((snapshot) => {
                     materials = [];
                     snapshot.forEach((doc) => {
-                        materials.push({ id: doc.id, ...doc.data() });
+                        const data = doc.data();
+                        if (!data.category) {
+                            data.category = 'その他';
+                        }
+                        materials.push({ id: doc.id, ...data });
                     });
                     
                     renderMaterials();
@@ -226,38 +457,200 @@
                 });
         }
 
+        // カテゴリフィルタ
+        function filterByCategory(category) {
+            currentCategory = category;
+            renderMaterials();
+        }
+
         // 資材一覧表示
         function renderMaterials() {
-            if (materials.length === 0) {
+            let filteredMaterials = materials;
+            if (currentCategory !== 'all') {
+                filteredMaterials = materials.filter(material => material.category === currentCategory);
+            }
+
+            if (filteredMaterials.length === 0) {
                 materialsGrid.classList.add('hidden');
                 emptyState.classList.remove('hidden');
+                
+                const emptyTitle = emptyState.querySelector('h2');
+                const emptyDesc = emptyState.querySelector('p');
+                
+                if (currentCategory === 'all') {
+                    emptyTitle.textContent = 'まだ資材が登録されていません';
+                    emptyDesc.textContent = '「新規追加」ボタンから最初の資材を登録しましょう';
+                } else {
+                    emptyTitle.textContent = `${currentCategory}の資材がありません`;
+                    emptyDesc.textContent = 'このカテゴリの資材を追加するか、他のカテゴリを選択してください';
+                }
                 return;
             }
             
             emptyState.classList.add('hidden');
             materialsGrid.classList.remove('hidden');
             
-            materialsGrid.innerHTML = materials.map(material => `
-                <div class="material-card bg-white rounded-lg shadow-md overflow-hidden">
-                    <div class="aspect-square bg-gray-200 relative">
-                        ${material.photoBase64 ? 
-                            `<img src="${material.photoBase64}" alt="${material.name}" class="w-full h-full object-cover">` :
-                            `<div class="w-full h-full flex items-center justify-center text-gray-400 text-4xl">📦</div>`
-                        }
+            materialsGrid.innerHTML = filteredMaterials.map(material => {
+                const categoryInfo = categories[material.category] || categories['その他'];
+                const colorClass = getCategoryColorClass(categoryInfo.color);
+                
+                return `
+                    <div class="material-card bg-white rounded-lg shadow-md overflow-hidden">
+                        <div class="aspect-square bg-gray-200 relative">
+                            ${material.photoBase64 ? 
+                                `<img src="${material.photoBase64}" alt="${material.name}" class="w-full h-full object-cover">` :
+                                `<div class="w-full h-full flex items-center justify-center text-gray-400 text-4xl">${categoryInfo.emoji}</div>`
+                            }
+                            <!-- カテゴリバッジ -->
+                            <div class="absolute top-2 left-2">
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${colorClass}">
+                                    ${categoryInfo.emoji} ${material.category}
+                                </span>
+                            </div>
+                            <!-- 削除ボタン（管理者モードのみ） -->
+                            ${isAdminMode ? `
+                                <div class="absolute top-2 right-2">
+                                    <button class="delete-btn text-white px-2 py-1 rounded-full text-xs font-medium hover:scale-105 transition"
+                                            onclick="openDeleteModal('${material.id}', '${material.name}', '${material.category}')">
+                                        🗑️
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="p-3">
+                            <h3 class="font-semibold text-sm mb-2 truncate" title="${material.name}">
+                                ${material.name}
+                            </h3>
+                            <button 
+                                class="toggle-btn w-full py-2 px-3 rounded-md text-sm font-medium ${material.inStock ? 'in-stock' : 'out-of-stock'}"
+                                onclick="toggleStock('${material.id}', ${!material.inStock})"
+                            >
+                                ${material.inStock ? '✅ 在庫あり' : '❌ 在庫なし'}
+                            </button>
+                        </div>
                     </div>
-                    <div class="p-3">
-                        <h3 class="font-semibold text-sm mb-2 truncate" title="${material.name}">
-                            ${material.name}
-                        </h3>
-                        <button 
-                            class="toggle-btn w-full py-2 px-3 rounded-md text-sm font-medium ${material.inStock ? 'in-stock' : 'out-of-stock'}"
-                            onclick="toggleStock('${material.id}', ${!material.inStock})"
-                        >
-                            ${material.inStock ? '✅ 在庫あり' : '❌ 在庫なし'}
-                        </button>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
+        }
+
+        // カテゴリ色クラス取得
+        function getCategoryColorClass(color) {
+            const colorMap = {
+                'blue': 'bg-blue-100 text-blue-800',
+                'yellow': 'bg-yellow-100 text-yellow-800',
+                'green': 'bg-green-100 text-green-800',
+                'orange': 'bg-orange-100 text-orange-800',
+                'gray': 'bg-gray-100 text-gray-600'
+            };
+            return colorMap[color] || colorMap['gray'];
+        }
+
+        // 管理者ログイン
+        function handleAdminLogin(e) {
+            e.preventDefault();
+            const password = adminPassword.value;
+            
+            if (password === ADMIN_PASSWORD) {
+                isAdminMode = true;
+                closeAdminModalHandler();
+                
+                // UI更新
+                adminBtn.classList.add('hidden');
+                adminStatus.classList.remove('hidden');
+                adminStatus.classList.add('flex', 'admin-mode');
+                
+                // 自動ログアウト設定
+                setAdminTimeout();
+                
+                // 画面を再描画して削除ボタンを表示
+                renderMaterials();
+                
+                console.log('🔐 管理者モードを開始');
+                showSuccess('管理者モードが有効になりました');
+            } else {
+                showError('パスワードが間違っています');
+                adminPassword.focus();
+            }
+        }
+
+        // 管理者ログアウト
+        function logout() {
+            isAdminMode = false;
+            clearAdminTimeout();
+            
+            // UI更新
+            adminBtn.classList.remove('hidden');
+            adminStatus.classList.add('hidden');
+            adminStatus.classList.remove('flex', 'admin-mode');
+            
+            // 画面を再描画して削除ボタンを非表示
+            renderMaterials();
+            
+            console.log('🔐 管理者モードを終了');
+            showSuccess('管理者モードを終了しました');
+        }
+
+        // 管理者タイムアウト設定
+        function setAdminTimeout() {
+            clearAdminTimeout();
+            adminTimeout = setTimeout(() => {
+                logout();
+                showError('管理者セッションがタイムアウトしました');
+            }, ADMIN_SESSION_TIMEOUT);
+        }
+
+        // 管理者タイムアウトクリア
+        function clearAdminTimeout() {
+            if (adminTimeout) {
+                clearTimeout(adminTimeout);
+                adminTimeout = null;
+            }
+        }
+
+        // 削除モーダル開く
+        window.openDeleteModal = function(materialId, materialName, materialCategory) {
+            if (!isAdminMode) {
+                showError('管理者権限が必要です');
+                return;
+            }
+            
+            materialToDelete = { id: materialId, name: materialName, category: materialCategory };
+            deleteTargetName.textContent = materialName;
+            deleteTargetCategory.textContent = `カテゴリ: ${materialCategory}`;
+            
+            deleteModal.classList.remove('hidden');
+            deleteModal.classList.add('flex');
+        };
+
+        // 削除実行
+        function confirmDelete() {
+            if (!materialToDelete || !isAdminMode) return;
+            
+            if (!isOnline) {
+                showError('オフライン中は削除できません');
+                return;
+            }
+            
+            confirmDeleteBtn.disabled = true;
+            confirmDeleteBtn.textContent = '削除中...';
+            
+            db.collection('materials').doc(materialToDelete.id).delete()
+                .then(() => {
+                    console.log('🗑️ 資材を削除しました:', materialToDelete.name);
+                    showSuccess(`「${materialToDelete.name}」を削除しました`);
+                    closeDeleteModalHandler();
+                    
+                    // 管理者セッションを延長
+                    setAdminTimeout();
+                })
+                .catch((error) => {
+                    console.error('❌ 削除エラー:', error);
+                    showError('削除に失敗しました: ' + error.message);
+                })
+                .finally(() => {
+                    confirmDeleteBtn.disabled = false;
+                    confirmDeleteBtn.textContent = '削除する';
+                });
         }
 
         // 在庫状態トグル
@@ -272,20 +665,24 @@
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             }).then(() => {
                 console.log(`📝 在庫状態を更新: ${materialId} -> ${newStock}`);
+                
+                // 管理者モードの場合はセッション延長
+                if (isAdminMode) {
+                    setAdminTimeout();
+                }
             }).catch((error) => {
                 console.error('❌ 在庫更新エラー:', error);
                 showError('在庫状態の更新に失敗しました');
             });
         }
 
-        // モーダル開く
+        // モーダル開閉処理
         function openModal() {
             modal.classList.remove('hidden');
             modal.classList.add('flex');
             document.getElementById('materialName').focus();
         }
 
-        // モーダル閉じる
         function closeModalHandler() {
             modal.classList.add('hidden');
             modal.classList.remove('flex');
@@ -293,11 +690,28 @@
             imagePreview.classList.add('hidden');
         }
 
+        function openAdminModal() {
+            adminModal.classList.remove('hidden');
+            adminModal.classList.add('flex');
+            adminPassword.focus();
+        }
+
+        function closeAdminModalHandler() {
+            adminModal.classList.add('hidden');
+            adminModal.classList.remove('flex');
+            adminForm.reset();
+        }
+
+        function closeDeleteModalHandler() {
+            deleteModal.classList.add('hidden');
+            deleteModal.classList.remove('flex');
+            materialToDelete = null;
+        }
+
         // 画像プレビュー
         function handleImagePreview(e) {
             const file = e.target.files[0];
             if (file) {
-                // ファイルサイズチェック（1MB制限）
                 if (file.size > 1024 * 1024) {
                     showError('画像サイズは1MB以下にしてください');
                     e.target.value = '';
@@ -326,9 +740,10 @@
             }
             
             const name = document.getElementById('materialName').value.trim();
+            const category = document.getElementById('materialCategory').value;
             const photoFile = materialPhoto.files[0];
             
-            if (!name) return;
+            if (!name || !category) return;
             
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
@@ -337,25 +752,30 @@
             try {
                 let photoBase64 = '';
                 
-                // 画像処理（Base64エンコード）
                 if (photoFile) {
                     console.log('📸 画像をリサイズ中...');
                     const resizedFile = await resizeImage(photoFile, 800);
                     photoBase64 = await fileToBase64(resizedFile);
                 }
                 
-                // Firestoreに保存
                 console.log('💾 Firestoreに保存中...');
                 await db.collection('materials').add({
                     name,
+                    category,
                     photoBase64,
                     inStock: true,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
-                console.log('✅ 資材を登録しました:', name);
+                console.log('✅ 資材を登録しました:', name, `(${category})`);
                 closeModalHandler();
+                showSuccess(`「${name}」を登録しました`);
+                
+                // 管理者モードの場合はセッション延長
+                if (isAdminMode) {
+                    setAdminTimeout();
+                }
                 
             } catch (error) {
                 console.error('❌ 登録エラー:', error);
@@ -366,7 +786,7 @@
             }
         }
 
-        // 画像リサイズ（軽量化）
+        // 画像リサイズ
         function resizeImage(file, maxWidth = 800) {
             return new Promise((resolve) => {
                 const canvas = document.createElement('canvas');
@@ -374,15 +794,11 @@
                 const img = new Image();
                 
                 img.onload = () => {
-                    // アスペクト比を保持してリサイズ
                     const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
                     canvas.width = img.width * ratio;
                     canvas.height = img.height * ratio;
                     
-                    // 画像を描画
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    
-                    // Blobに変換（圧縮率高め）
                     canvas.toBlob(resolve, 'image/jpeg', 0.6);
                 };
                 
@@ -405,12 +821,31 @@
             loading.classList.add('hidden');
         }
 
-        // エラー表示
+        // メッセージ表示
         function showError(message) {
-            alert(`⚠️ ${message}`);
+            showMessage(message, 'error');
         }
 
-        console.log('🛡️ CORS解決版で起動しました');
+        function showSuccess(message) {
+            showMessage(message, 'success');
+        }
+
+        function showMessage(message, type) {
+            const toast = document.createElement('div');
+            const bgColor = type === 'error' ? 'bg-red-600' : 'bg-green-600';
+            toast.className = `fixed bottom-4 left-4 ${bgColor} text-white px-4 py-2 rounded-lg shadow-lg z-50`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // グローバル関数の登録
+        window.toggleStock = toggleStock;
+
+        console.log('🔐 管理者機能付きバージョンで起動しました');
     </script>
 </body>
 </html>
