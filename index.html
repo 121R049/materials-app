@@ -17,17 +17,18 @@
             border-color: #9CA3AF;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
-        .quantity-control {
-            transition: all 0.2s ease-in-out;
-        }
-        .quantity-control:hover {
-            background-color: #F3F4F6;
-        }
         .quantity-input {
             transition: all 0.2s ease-in-out;
         }
         .quantity-input:focus {
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+        }
+        .stock-toggle-btn {
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+        }
+        .stock-toggle-btn:hover {
+            transform: scale(1.1);
         }
         @keyframes pulse {
             0%, 100% { opacity: 1; }
@@ -473,10 +474,10 @@
             });
         }
 
-        // 資材データ読み込み（リアルタイム）
+        // 資材データ読み込み（リアルタイム）- 登録順で固定
         function loadMaterials() {
             db.collection('materials')
-                .orderBy('updatedAt', 'desc')
+                .orderBy('createdAt', 'asc')  // 登録順で固定
                 .onSnapshot((snapshot) => {
                     materials = [];
                     snapshot.forEach((doc) => {
@@ -593,39 +594,30 @@
                                 ${material.name}
                             </h3>
                             
-                            <!-- 在庫数表示・編集 -->
-                            <div class="space-y-2">
+                            <!-- 在庫管理 -->
+                            <div class="space-y-3">
+                                <!-- 在庫状況切り替えボタン -->
                                 <div class="flex items-center justify-between">
                                     <span class="text-xs font-medium text-gray-500">在庫状況</span>
-                                    <div class="flex items-center space-x-2">
+                                    <button class="stock-toggle-btn flex items-center space-x-2 px-3 py-2 rounded-md border-2 transition ${isInStock ? 'border-green-200 bg-green-50 hover:bg-green-100' : 'border-red-200 bg-red-50 hover:bg-red-100'}"
+                                            onclick="toggleStock('${material.id}', ${isInStock})"
+                                            title="クリックで在庫状況を切り替え">
                                         <span class="text-lg">
                                             ${isInStock ? '✅' : '❌'}
                                         </span>
-                                        <span class="stock-badge text-sm px-2 py-1 rounded ${isInStock ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                                            ${quantity} 個
+                                        <span class="text-sm font-medium ${isInStock ? 'text-green-700' : 'text-red-700'}">
+                                            ${isInStock ? '在庫あり' : '在庫なし'}
                                         </span>
-                                    </div>
-                                </div>
-                                
-                                <div class="flex items-center justify-between">
-                                    <span class="text-xs font-medium ${isInStock ? 'text-green-600' : 'text-red-600'}">
-                                        ${isInStock ? '在庫あり' : '在庫なし'}
-                                    </span>
-                                </div>
-                                
-                                <div class="flex items-center space-x-1">
-                                    <button class="quantity-control w-8 h-8 flex items-center justify-center border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50"
-                                            onclick="updateQuantity('${material.id}', ${Math.max(0, quantity - 1)})">
-                                        −
                                     </button>
+                                </div>
+                                
+                                <!-- 個数入力 -->
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-medium text-gray-500">個数</span>
                                     <input type="number" min="0" value="${quantity}" 
-                                           class="quantity-input flex-1 h-8 px-2 text-center border border-gray-300 rounded-md text-sm"
+                                           class="quantity-input w-20 h-8 px-2 text-center border border-gray-300 rounded-md text-sm"
                                            onchange="updateQuantity('${material.id}', parseInt(this.value) || 0)"
                                            onclick="this.select()">
-                                    <button class="quantity-control w-8 h-8 flex items-center justify-center border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50"
-                                            onclick="updateQuantity('${material.id}', ${quantity + 1})">
-                                        +
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -634,7 +626,18 @@
             }).join('');
         }
 
-        // 在庫数更新
+        // 在庫状況の切り替え
+        window.toggleStock = function(materialId, currentlyInStock) {
+            if (!isOnline) {
+                showError('オフライン中は編集できません');
+                return;
+            }
+
+            const newQuantity = currentlyInStock ? 0 : 1;
+            updateQuantity(materialId, newQuantity);
+        };
+
+        // 在庫数更新（updatedAtは更新しない）
         window.updateQuantity = function(materialId, newQuantity) {
             if (!isOnline) {
                 showError('オフライン中は編集できません');
@@ -643,9 +646,9 @@
 
             if (newQuantity < 0) newQuantity = 0;
 
+            // updatedAtを更新せずに在庫数のみ更新
             db.collection('materials').doc(materialId).update({
-                quantity: newQuantity,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                quantity: newQuantity
             }).then(() => {
                 console.log(`📝 在庫数を更新: ${materialId} -> ${newQuantity}`);
                 
