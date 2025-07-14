@@ -596,9 +596,20 @@
                             <!-- 在庫数表示・編集 -->
                             <div class="space-y-2">
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs font-medium text-gray-500">在庫数</span>
-                                    <span class="stock-badge text-sm px-2 py-1 rounded ${isInStock ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                                        ${quantity} 個
+                                    <span class="text-xs font-medium text-gray-500">在庫状況</span>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-lg">
+                                            ${isInStock ? '✅' : '❌'}
+                                        </span>
+                                        <span class="stock-badge text-sm px-2 py-1 rounded ${isInStock ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                            ${quantity} 個
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-medium ${isInStock ? 'text-green-600' : 'text-red-600'}">
+                                        ${isInStock ? '在庫あり' : '在庫なし'}
                                     </span>
                                 </div>
                                 
