@@ -23,12 +23,25 @@
         .quantity-input:focus {
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
         }
+        .usage-input {
+            transition: all 0.2s ease-in-out;
+        }
+        .usage-input:focus {
+            box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5);
+        }
         .stock-toggle-btn {
             transition: all 0.2s ease-in-out;
             cursor: pointer;
         }
         .stock-toggle-btn:hover {
             transform: scale(1.1);
+        }
+        .usage-btn {
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+        }
+        .usage-btn:hover {
+            transform: scale(1.05);
         }
         @keyframes pulse {
             0%, 100% { opacity: 1; }
@@ -611,9 +624,41 @@
                                     </button>
                                 </div>
                                 
-                                <!-- 個数入力 -->
+                                <!-- 現在の個数表示 -->
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs font-medium text-gray-500">個数</span>
+                                    <span class="text-xs font-medium text-gray-500">現在の在庫数</span>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="stock-badge text-lg font-bold ${isInStock ? 'text-green-600' : 'text-red-600'}">
+                                            ${quantity}
+                                        </span>
+                                        <span class="text-xs text-gray-500">個</span>
+                                    </div>
+                                </div>
+
+                                <!-- 使用数量入力 -->
+                                <div class="bg-orange-50 border border-orange-200 rounded-md p-3">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-xs font-medium text-orange-700">📤 いくつ使いましたか？</span>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <input type="number" min="1" max="${quantity}" value="1" 
+                                               class="usage-input flex-1 h-8 px-2 text-center border border-orange-300 rounded-md text-sm bg-white"
+                                               id="usage-${material.id}"
+                                               onclick="this.select()"
+                                               ${quantity === 0 ? 'disabled' : ''}>
+                                        <button class="usage-btn px-3 py-1 bg-orange-500 text-white rounded-md text-xs font-medium hover:bg-orange-600 transition"
+                                                onclick="useItems('${material.id}')"
+                                                ${quantity === 0 ? 'disabled' : ''}
+                                                title="入力した数量を在庫から減らします">
+                                            使用
+                                        </button>
+                                    </div>
+                                    <p class="text-xs text-orange-600 mt-1">使った分だけ在庫から自動で引かれます</p>
+                                </div>
+                                
+                                <!-- 個数直接入力 -->
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-medium text-gray-500">個数直接変更</span>
                                     <input type="number" min="0" value="${quantity}" 
                                            class="quantity-input w-20 h-8 px-2 text-center border border-gray-300 rounded-md text-sm"
                                            onchange="updateQuantity('${material.id}', parseInt(this.value) || 0)"
@@ -625,6 +670,54 @@
                 `;
             }).join('');
         }
+
+        // 使用数量を在庫から減らす
+        window.useItems = function(materialId) {
+            if (!isOnline) {
+                showError('オフライン中は編集できません');
+                return;
+            }
+
+            const usageInput = document.getElementById(`usage-${materialId}`);
+            const usageAmount = parseInt(usageInput.value) || 0;
+            
+            if (usageAmount <= 0) {
+                showError('使用数量を正しく入力してください');
+                return;
+            }
+
+            // 現在の在庫数を取得
+            const material = materials.find(m => m.id === materialId);
+            if (!material) return;
+
+            const currentQuantity = material.quantity || 0;
+            
+            if (usageAmount > currentQuantity) {
+                showError(`在庫が足りません（現在：${currentQuantity}個）`);
+                return;
+            }
+
+            const newQuantity = currentQuantity - usageAmount;
+            
+            // 在庫数を更新
+            db.collection('materials').doc(materialId).update({
+                quantity: newQuantity
+            }).then(() => {
+                console.log(`📝 ${usageAmount}個使用: ${materialId} (${currentQuantity} → ${newQuantity})`);
+                showSuccess(`${usageAmount}個使用しました`);
+                
+                // 入力欄をリセット
+                usageInput.value = 1;
+                
+                // 管理者モードの場合はセッション延長
+                if (isAdminMode) {
+                    setAdminTimeout();
+                }
+            }).catch((error) => {
+                console.error('❌ 使用記録エラー:', error);
+                showError('使用記録の更新に失敗しました');
+            });
+        };
 
         // 在庫状況の切り替え
         window.toggleStock = function(materialId, currentlyInStock) {
