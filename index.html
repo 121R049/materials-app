@@ -23,11 +23,17 @@
         .quantity-input:focus {
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
         }
-        .usage-input {
+        .numpad-btn {
             transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            user-select: none;
         }
-        .usage-input:focus {
-            box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5);
+        .numpad-btn:hover {
+            transform: scale(1.1);
+            background-color: #F97316 !important;
+        }
+        .numpad-btn:active {
+            transform: scale(0.95);
         }
         .stock-toggle-btn {
             transition: all 0.2s ease-in-out;
@@ -635,24 +641,53 @@
                                     </div>
                                 </div>
 
-                                <!-- 使用数量入力 -->
-                                <div class="bg-orange-50 border border-orange-200 rounded-md p-3">
+                                <!-- 使用数量入力（テンキーパッド） -->
+                                <div class="bg-orange-50 border border-orange-200 rounded-md p-3 ${quantity === 0 ? 'opacity-50' : ''}">
                                     <div class="flex items-center justify-between mb-2">
                                         <span class="text-xs font-medium text-orange-700">📤 いくつ使いましたか？</span>
+                                        <span class="text-lg font-bold text-orange-600" id="display-${material.id}">0</span>
                                     </div>
-                                    <div class="flex items-center space-x-2">
-                                        <input type="number" min="1" max="${quantity}" value="1" 
-                                               class="usage-input flex-1 h-8 px-2 text-center border border-orange-300 rounded-md text-sm bg-white"
-                                               id="usage-${material.id}"
-                                               onclick="this.select()"
-                                               ${quantity === 0 ? 'disabled' : ''}>
-                                        <button class="usage-btn px-3 py-1 bg-orange-500 text-white rounded-md text-xs font-medium hover:bg-orange-600 transition"
-                                                onclick="useItems('${material.id}')"
-                                                ${quantity === 0 ? 'disabled' : ''}
-                                                title="入力した数量を在庫から減らします">
-                                            使用
-                                        </button>
+                                    
+                                    <!-- テンキーパッド -->
+                                    <div class="grid grid-cols-3 gap-1 mb-2">
+                                        <!-- 1行目 -->
+                                        <button type="button" class="numpad-btn w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
+                                                onclick="addToUsage('${material.id}', 1)" ${quantity === 0 ? 'disabled' : ''}>1</button>
+                                        <button type="button" class="numpad-btn w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
+                                                onclick="addToUsage('${material.id}', 2)" ${quantity === 0 ? 'disabled' : ''}>2</button>
+                                        <button type="button" class="numpad-btn w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
+                                                onclick="addToUsage('${material.id}', 3)" ${quantity === 0 ? 'disabled' : ''}>3</button>
+                                        
+                                        <!-- 2行目 -->
+                                        <button type="button" class="numpad-btn w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
+                                                onclick="addToUsage('${material.id}', 4)" ${quantity === 0 ? 'disabled' : ''}>4</button>
+                                        <button type="button" class="numpad-btn w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
+                                                onclick="addToUsage('${material.id}', 5)" ${quantity === 0 ? 'disabled' : ''}>5</button>
+                                        <button type="button" class="numpad-btn w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
+                                                onclick="addToUsage('${material.id}', 6)" ${quantity === 0 ? 'disabled' : ''}>6</button>
+                                        
+                                        <!-- 3行目 -->
+                                        <button type="button" class="numpad-btn w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
+                                                onclick="addToUsage('${material.id}', 7)" ${quantity === 0 ? 'disabled' : ''}>7</button>
+                                        <button type="button" class="numpad-btn w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
+                                                onclick="addToUsage('${material.id}', 8)" ${quantity === 0 ? 'disabled' : ''}>8</button>
+                                        <button type="button" class="numpad-btn w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
+                                                onclick="addToUsage('${material.id}', 9)" ${quantity === 0 ? 'disabled' : ''}>9</button>
+                                        
+                                        <!-- 4行目（0とクリアボタン） -->
+                                        <button type="button" class="numpad-btn w-8 h-8 bg-gray-400 text-white rounded font-bold text-xs"
+                                                onclick="clearUsage('${material.id}')" ${quantity === 0 ? 'disabled' : ''}>C</button>
+                                        <button type="button" class="numpad-btn w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
+                                                onclick="addToUsage('${material.id}', 0)" ${quantity === 0 ? 'disabled' : ''}>0</button>
+                                        <button type="button" class="numpad-btn w-8 h-8 bg-red-400 text-white rounded font-bold text-xs"
+                                                onclick="backspaceUsage('${material.id}')" ${quantity === 0 ? 'disabled' : ''}>⌫</button>
                                     </div>
+                                    
+                                    <button class="usage-btn w-full py-2 bg-orange-500 text-white rounded-md text-sm font-medium hover:bg-orange-600 transition"
+                                            onclick="useItems('${material.id}')"
+                                            ${quantity === 0 ? 'disabled' : ''}>
+                                        使用する
+                                    </button>
                                     <p class="text-xs text-orange-600 mt-1">使った分だけ在庫から自動で引かれます</p>
                                 </div>
                                 
@@ -671,6 +706,58 @@
             }).join('');
         }
 
+        // テンキーパッド用の使用数量管理
+        let usageAmounts = {};
+
+        // 数字をディスプレイに追加
+        window.addToUsage = function(materialId, digit) {
+            if (!usageAmounts[materialId]) {
+                usageAmounts[materialId] = '';
+            }
+            
+            // 最初の0は無視（例：0 + 5 = 5）
+            if (usageAmounts[materialId] === '0') {
+                usageAmounts[materialId] = '';
+            }
+            
+            usageAmounts[materialId] += digit.toString();
+            
+            // 在庫数を超えないようにチェック
+            const material = materials.find(m => m.id === materialId);
+            const maxQuantity = material ? material.quantity || 0 : 0;
+            const currentAmount = parseInt(usageAmounts[materialId]) || 0;
+            
+            if (currentAmount > maxQuantity) {
+                usageAmounts[materialId] = maxQuantity.toString();
+                showError(`在庫数（${maxQuantity}個）を超えています`);
+            }
+            
+            updateUsageDisplay(materialId);
+        };
+
+        // 使用数量をクリア
+        window.clearUsage = function(materialId) {
+            usageAmounts[materialId] = '';
+            updateUsageDisplay(materialId);
+        };
+
+        // バックスペース（最後の文字を削除）
+        window.backspaceUsage = function(materialId) {
+            if (usageAmounts[materialId]) {
+                usageAmounts[materialId] = usageAmounts[materialId].slice(0, -1);
+                updateUsageDisplay(materialId);
+            }
+        };
+
+        // ディスプレイ更新
+        function updateUsageDisplay(materialId) {
+            const display = document.getElementById(`display-${materialId}`);
+            if (display) {
+                const amount = usageAmounts[materialId] || '0';
+                display.textContent = amount;
+            }
+        }
+
         // 使用数量を在庫から減らす
         window.useItems = function(materialId) {
             if (!isOnline) {
@@ -678,11 +765,10 @@
                 return;
             }
 
-            const usageInput = document.getElementById(`usage-${materialId}`);
-            const usageAmount = parseInt(usageInput.value) || 0;
+            const usageAmount = parseInt(usageAmounts[materialId]) || 0;
             
             if (usageAmount <= 0) {
-                showError('使用数量を正しく入力してください');
+                showError('使用数量を入力してください');
                 return;
             }
 
@@ -706,8 +792,9 @@
                 console.log(`📝 ${usageAmount}個使用: ${materialId} (${currentQuantity} → ${newQuantity})`);
                 showSuccess(`${usageAmount}個使用しました`);
                 
-                // 入力欄をリセット
-                usageInput.value = 1;
+                // 使用数量をリセット
+                usageAmounts[materialId] = '';
+                updateUsageDisplay(materialId);
                 
                 // 管理者モードの場合はセッション延長
                 if (isAdminMode) {
