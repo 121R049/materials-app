@@ -696,14 +696,14 @@
                                     <p class="text-xs text-orange-600 mt-1">使った分だけ在庫から自動で引かれます</p>
                                 </div>
                                 
-                                <!-- 仕入れ個数入力（テンキーパッド） -->
+                                <!-- 補充個数入力（テンキーパッド） -->
                                 <div class="bg-green-50 border border-green-200 rounded-md p-3">
                                     <div class="flex items-center justify-between mb-2">
-                                        <span class="text-xs font-medium text-green-700">📦 いくつ仕入れましたか？</span>
+                                        <span class="text-xs font-medium text-green-700">📦 いくつ補充しましたか？</span>
                                         <span class="text-lg font-bold text-green-600" id="restock-display-${material.id}">0</span>
                                     </div>
                                     
-                                    <!-- 仕入れ用テンキーパッド -->
+                                    <!-- 補充用テンキーパッド -->
                                     <div class="grid grid-cols-3 gap-1 mb-2">
                                         <!-- 1行目 -->
                                         <button type="button" class="numpad-btn restock w-8 h-8 bg-green-500 text-white rounded font-bold text-sm"
@@ -740,9 +740,9 @@
                                     
                                     <button class="restock-btn w-full py-2 bg-green-500 text-white rounded-md text-sm font-medium hover:bg-green-600 transition"
                                             onclick="restockItems('${material.id}')">
-                                        仕入れる
+                                        補充する
                                     </button>
-                                    <p class="text-xs text-green-600 mt-1">仕入れた分だけ在庫に自動で追加されます</p>
+                                    <p class="text-xs text-green-600 mt-1">補充した分だけ在庫に自動で追加されます</p>
                                 </div>
                             </div>
                         </div>
@@ -781,7 +781,7 @@
             updateUsageDisplay(materialId);
         };
 
-        // 仕入れ数量：数字をディスプレイに追加
+        // 補充数量：数字をディスプレイに追加
         window.addToRestock = function(materialId, digit) {
             if (!restockAmounts[materialId]) {
                 restockAmounts[materialId] = '';
@@ -802,7 +802,7 @@
             updateUsageDisplay(materialId);
         };
 
-        // 仕入れ数量をクリア
+        // 補充数量をクリア
         window.clearRestock = function(materialId) {
             restockAmounts[materialId] = '';
             updateRestockDisplay(materialId);
@@ -816,7 +816,7 @@
             }
         };
 
-        // 仕入れ数量バックスペース
+        // 補充数量バックスペース
         window.backspaceRestock = function(materialId) {
             if (restockAmounts[materialId]) {
                 restockAmounts[materialId] = restockAmounts[materialId].slice(0, -1);
@@ -833,7 +833,7 @@
             }
         }
 
-        // 仕入れディスプレイ更新
+        // 補充ディスプレイ更新
         function updateRestockDisplay(materialId) {
             const display = document.getElementById(`restock-display-${materialId}`);
             if (display) {
@@ -890,7 +890,7 @@
             });
         };
 
-        // 仕入れ数量を在庫に追加
+        // 補充数量を在庫に追加
         window.restockItems = function(materialId) {
             if (!isOnline) {
                 showError('オフライン中は編集できません');
@@ -900,7 +900,7 @@
             const restockAmount = parseInt(restockAmounts[materialId]) || 0;
             
             if (restockAmount <= 0) {
-                showError('仕入れ数量を入力してください');
+                showError('補充数量を入力してください');
                 return;
             }
 
@@ -915,10 +915,10 @@
             db.collection('materials').doc(materialId).update({
                 quantity: newQuantity
             }).then(() => {
-                console.log(`📦 ${restockAmount}個仕入れ: ${materialId} (${currentQuantity} → ${newQuantity})`);
-                showSuccess(`${restockAmount}個仕入れました`);
+                console.log(`📦 ${restockAmount}個補充: ${materialId} (${currentQuantity} → ${newQuantity})`);
+                showSuccess(`${restockAmount}個補充ました`);
                 
-                // 仕入れ数量をリセット
+                // 補充数量をリセット
                 restockAmounts[materialId] = '';
                 updateRestockDisplay(materialId);
                 
@@ -927,8 +927,8 @@
                     setAdminTimeout();
                 }
             }).catch((error) => {
-                console.error('❌ 仕入れ記録エラー:', error);
-                showError('仕入れ記録の更新に失敗しました');
+                console.error('❌ 補充記録エラー:', error);
+                showError('補充記録の更新に失敗しました');
             });
         };
 
