@@ -30,10 +30,15 @@
         }
         .numpad-btn:hover {
             transform: scale(1.1);
-            background-color: #F97316 !important;
         }
         .numpad-btn:active {
             transform: scale(0.95);
+        }
+        .numpad-btn.usage:hover {
+            background-color: #F97316 !important;
+        }
+        .numpad-btn.restock:hover {
+            background-color: #059669 !important;
         }
         .stock-toggle-btn {
             transition: all 0.2s ease-in-out;
@@ -42,11 +47,11 @@
         .stock-toggle-btn:hover {
             transform: scale(1.1);
         }
-        .usage-btn {
+        .usage-btn, .restock-btn {
             transition: all 0.2s ease-in-out;
             cursor: pointer;
         }
-        .usage-btn:hover {
+        .usage-btn:hover, .restock-btn:hover {
             transform: scale(1.05);
         }
         @keyframes pulse {
@@ -645,39 +650,39 @@
                                 <div class="bg-orange-50 border border-orange-200 rounded-md p-3 ${quantity === 0 ? 'opacity-50' : ''}">
                                     <div class="flex items-center justify-between mb-2">
                                         <span class="text-xs font-medium text-orange-700">📤 いくつ使いましたか？</span>
-                                        <span class="text-lg font-bold text-orange-600" id="display-${material.id}">0</span>
+                                        <span class="text-lg font-bold text-orange-600" id="usage-display-${material.id}">0</span>
                                     </div>
                                     
-                                    <!-- テンキーパッド -->
+                                    <!-- 使用用テンキーパッド -->
                                     <div class="grid grid-cols-3 gap-1 mb-2">
                                         <!-- 1行目 -->
-                                        <button type="button" class="numpad-btn w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
+                                        <button type="button" class="numpad-btn usage w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
                                                 onclick="addToUsage('${material.id}', 1)" ${quantity === 0 ? 'disabled' : ''}>1</button>
-                                        <button type="button" class="numpad-btn w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
+                                        <button type="button" class="numpad-btn usage w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
                                                 onclick="addToUsage('${material.id}', 2)" ${quantity === 0 ? 'disabled' : ''}>2</button>
-                                        <button type="button" class="numpad-btn w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
+                                        <button type="button" class="numpad-btn usage w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
                                                 onclick="addToUsage('${material.id}', 3)" ${quantity === 0 ? 'disabled' : ''}>3</button>
                                         
                                         <!-- 2行目 -->
-                                        <button type="button" class="numpad-btn w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
+                                        <button type="button" class="numpad-btn usage w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
                                                 onclick="addToUsage('${material.id}', 4)" ${quantity === 0 ? 'disabled' : ''}>4</button>
-                                        <button type="button" class="numpad-btn w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
+                                        <button type="button" class="numpad-btn usage w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
                                                 onclick="addToUsage('${material.id}', 5)" ${quantity === 0 ? 'disabled' : ''}>5</button>
-                                        <button type="button" class="numpad-btn w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
+                                        <button type="button" class="numpad-btn usage w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
                                                 onclick="addToUsage('${material.id}', 6)" ${quantity === 0 ? 'disabled' : ''}>6</button>
                                         
                                         <!-- 3行目 -->
-                                        <button type="button" class="numpad-btn w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
+                                        <button type="button" class="numpad-btn usage w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
                                                 onclick="addToUsage('${material.id}', 7)" ${quantity === 0 ? 'disabled' : ''}>7</button>
-                                        <button type="button" class="numpad-btn w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
+                                        <button type="button" class="numpad-btn usage w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
                                                 onclick="addToUsage('${material.id}', 8)" ${quantity === 0 ? 'disabled' : ''}>8</button>
-                                        <button type="button" class="numpad-btn w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
+                                        <button type="button" class="numpad-btn usage w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
                                                 onclick="addToUsage('${material.id}', 9)" ${quantity === 0 ? 'disabled' : ''}>9</button>
                                         
                                         <!-- 4行目（0とクリアボタン） -->
                                         <button type="button" class="numpad-btn w-8 h-8 bg-gray-400 text-white rounded font-bold text-xs"
                                                 onclick="clearUsage('${material.id}')" ${quantity === 0 ? 'disabled' : ''}>C</button>
-                                        <button type="button" class="numpad-btn w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
+                                        <button type="button" class="numpad-btn usage w-8 h-8 bg-orange-400 text-white rounded font-bold text-sm"
                                                 onclick="addToUsage('${material.id}', 0)" ${quantity === 0 ? 'disabled' : ''}>0</button>
                                         <button type="button" class="numpad-btn w-8 h-8 bg-red-400 text-white rounded font-bold text-xs"
                                                 onclick="backspaceUsage('${material.id}')" ${quantity === 0 ? 'disabled' : ''}>⌫</button>
@@ -691,13 +696,53 @@
                                     <p class="text-xs text-orange-600 mt-1">使った分だけ在庫から自動で引かれます</p>
                                 </div>
                                 
-                                <!-- 個数直接入力 -->
-                                <div class="flex items-center justify-between">
-                                    <span class="text-xs font-medium text-gray-500">個数直接変更</span>
-                                    <input type="number" min="0" value="${quantity}" 
-                                           class="quantity-input w-20 h-8 px-2 text-center border border-gray-300 rounded-md text-sm"
-                                           onchange="updateQuantity('${material.id}', parseInt(this.value) || 0)"
-                                           onclick="this.select()">
+                                <!-- 仕入れ個数入力（テンキーパッド） -->
+                                <div class="bg-green-50 border border-green-200 rounded-md p-3">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-xs font-medium text-green-700">📦 いくつ仕入れましたか？</span>
+                                        <span class="text-lg font-bold text-green-600" id="restock-display-${material.id}">0</span>
+                                    </div>
+                                    
+                                    <!-- 仕入れ用テンキーパッド -->
+                                    <div class="grid grid-cols-3 gap-1 mb-2">
+                                        <!-- 1行目 -->
+                                        <button type="button" class="numpad-btn restock w-8 h-8 bg-green-500 text-white rounded font-bold text-sm"
+                                                onclick="addToRestock('${material.id}', 1)">1</button>
+                                        <button type="button" class="numpad-btn restock w-8 h-8 bg-green-500 text-white rounded font-bold text-sm"
+                                                onclick="addToRestock('${material.id}', 2)">2</button>
+                                        <button type="button" class="numpad-btn restock w-8 h-8 bg-green-500 text-white rounded font-bold text-sm"
+                                                onclick="addToRestock('${material.id}', 3)">3</button>
+                                        
+                                        <!-- 2行目 -->
+                                        <button type="button" class="numpad-btn restock w-8 h-8 bg-green-500 text-white rounded font-bold text-sm"
+                                                onclick="addToRestock('${material.id}', 4)">4</button>
+                                        <button type="button" class="numpad-btn restock w-8 h-8 bg-green-500 text-white rounded font-bold text-sm"
+                                                onclick="addToRestock('${material.id}', 5)">5</button>
+                                        <button type="button" class="numpad-btn restock w-8 h-8 bg-green-500 text-white rounded font-bold text-sm"
+                                                onclick="addToRestock('${material.id}', 6)">6</button>
+                                        
+                                        <!-- 3行目 -->
+                                        <button type="button" class="numpad-btn restock w-8 h-8 bg-green-500 text-white rounded font-bold text-sm"
+                                                onclick="addToRestock('${material.id}', 7)">7</button>
+                                        <button type="button" class="numpad-btn restock w-8 h-8 bg-green-500 text-white rounded font-bold text-sm"
+                                                onclick="addToRestock('${material.id}', 8)">8</button>
+                                        <button type="button" class="numpad-btn restock w-8 h-8 bg-green-500 text-white rounded font-bold text-sm"
+                                                onclick="addToRestock('${material.id}', 9)">9</button>
+                                        
+                                        <!-- 4行目（0とクリアボタン） -->
+                                        <button type="button" class="numpad-btn w-8 h-8 bg-gray-400 text-white rounded font-bold text-xs"
+                                                onclick="clearRestock('${material.id}')">C</button>
+                                        <button type="button" class="numpad-btn restock w-8 h-8 bg-green-500 text-white rounded font-bold text-sm"
+                                                onclick="addToRestock('${material.id}', 0)">0</button>
+                                        <button type="button" class="numpad-btn w-8 h-8 bg-red-400 text-white rounded font-bold text-xs"
+                                                onclick="backspaceRestock('${material.id}')">⌫</button>
+                                    </div>
+                                    
+                                    <button class="restock-btn w-full py-2 bg-green-500 text-white rounded-md text-sm font-medium hover:bg-green-600 transition"
+                                            onclick="restockItems('${material.id}')">
+                                        仕入れる
+                                    </button>
+                                    <p class="text-xs text-green-600 mt-1">仕入れた分だけ在庫に自動で追加されます</p>
                                 </div>
                             </div>
                         </div>
@@ -706,10 +751,11 @@
             }).join('');
         }
 
-        // テンキーパッド用の使用数量管理
+        // テンキーパッド用の数量管理
         let usageAmounts = {};
+        let restockAmounts = {};
 
-        // 数字をディスプレイに追加
+        // 使用数量：数字をディスプレイに追加
         window.addToUsage = function(materialId, digit) {
             if (!usageAmounts[materialId]) {
                 usageAmounts[materialId] = '';
@@ -735,13 +781,34 @@
             updateUsageDisplay(materialId);
         };
 
+        // 仕入れ数量：数字をディスプレイに追加
+        window.addToRestock = function(materialId, digit) {
+            if (!restockAmounts[materialId]) {
+                restockAmounts[materialId] = '';
+            }
+            
+            // 最初の0は無視（例：0 + 5 = 5）
+            if (restockAmounts[materialId] === '0') {
+                restockAmounts[materialId] = '';
+            }
+            
+            restockAmounts[materialId] += digit.toString();
+            updateRestockDisplay(materialId);
+        };
+
         // 使用数量をクリア
         window.clearUsage = function(materialId) {
             usageAmounts[materialId] = '';
             updateUsageDisplay(materialId);
         };
 
-        // バックスペース（最後の文字を削除）
+        // 仕入れ数量をクリア
+        window.clearRestock = function(materialId) {
+            restockAmounts[materialId] = '';
+            updateRestockDisplay(materialId);
+        };
+
+        // 使用数量バックスペース
         window.backspaceUsage = function(materialId) {
             if (usageAmounts[materialId]) {
                 usageAmounts[materialId] = usageAmounts[materialId].slice(0, -1);
@@ -749,11 +816,28 @@
             }
         };
 
-        // ディスプレイ更新
+        // 仕入れ数量バックスペース
+        window.backspaceRestock = function(materialId) {
+            if (restockAmounts[materialId]) {
+                restockAmounts[materialId] = restockAmounts[materialId].slice(0, -1);
+                updateRestockDisplay(materialId);
+            }
+        };
+
+        // 使用ディスプレイ更新
         function updateUsageDisplay(materialId) {
-            const display = document.getElementById(`display-${materialId}`);
+            const display = document.getElementById(`usage-display-${materialId}`);
             if (display) {
                 const amount = usageAmounts[materialId] || '0';
+                display.textContent = amount;
+            }
+        }
+
+        // 仕入れディスプレイ更新
+        function updateRestockDisplay(materialId) {
+            const display = document.getElementById(`restock-display-${materialId}`);
+            if (display) {
+                const amount = restockAmounts[materialId] || '0';
                 display.textContent = amount;
             }
         }
@@ -803,6 +887,48 @@
             }).catch((error) => {
                 console.error('❌ 使用記録エラー:', error);
                 showError('使用記録の更新に失敗しました');
+            });
+        };
+
+        // 仕入れ数量を在庫に追加
+        window.restockItems = function(materialId) {
+            if (!isOnline) {
+                showError('オフライン中は編集できません');
+                return;
+            }
+
+            const restockAmount = parseInt(restockAmounts[materialId]) || 0;
+            
+            if (restockAmount <= 0) {
+                showError('仕入れ数量を入力してください');
+                return;
+            }
+
+            // 現在の在庫数を取得
+            const material = materials.find(m => m.id === materialId);
+            if (!material) return;
+
+            const currentQuantity = material.quantity || 0;
+            const newQuantity = currentQuantity + restockAmount;
+            
+            // 在庫数を更新
+            db.collection('materials').doc(materialId).update({
+                quantity: newQuantity
+            }).then(() => {
+                console.log(`📦 ${restockAmount}個仕入れ: ${materialId} (${currentQuantity} → ${newQuantity})`);
+                showSuccess(`${restockAmount}個仕入れました`);
+                
+                // 仕入れ数量をリセット
+                restockAmounts[materialId] = '';
+                updateRestockDisplay(materialId);
+                
+                // 管理者モードの場合はセッション延長
+                if (isAdminMode) {
+                    setAdminTimeout();
+                }
+            }).catch((error) => {
+                console.error('❌ 仕入れ記録エラー:', error);
+                showError('仕入れ記録の更新に失敗しました');
             });
         };
 
