@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>資材管理システム（プロフェッショナル版）</title>
+    <title>資材管理システム（拡張版）</title>
     <meta name="theme-color" content="#1F2937">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -98,12 +98,54 @@
         .system-font {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
         }
+        .category-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.5rem;
+            margin: 0.125rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            background-color: #E5E7EB;
+            color: #374151;
+            transition: all 0.2s ease-in-out;
+        }
+        .category-tag.removable {
+            padding-right: 0.25rem;
+        }
+        .category-tag .remove-btn {
+            margin-left: 0.25rem;
+            cursor: pointer;
+            color: #6B7280;
+        }
+        .category-tag .remove-btn:hover {
+            color: #EF4444;
+        }
+        .category-selector {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #D1D5DB;
+            border-radius: 0.375rem;
+            background-color: white;
+        }
+        .category-option {
+            padding: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .category-option:hover {
+            background-color: #F3F4F6;
+        }
+        .category-option.selected {
+            background-color: #DBEAFE;
+            color: #1D4ED8;
+        }
     </style>
 </head>
 <body class="bg-gray-50 system-font">
     <!-- システム情報バー -->
     <div class="bg-slate-800 text-white p-2 text-center text-sm font-medium">
-        🏢 資材管理システム v2.0 - プロフェッショナル版 | 在庫個数管理・管理者機能搭載
+        🏢 資材管理システム v2.1 - 拡張版 | マルチカテゴリ対応・カテゴリ管理機能搭載
     </div>
 
     <!-- ヘッダー -->
@@ -122,6 +164,10 @@
                             Logout
                         </button>
                     </div>
+                    <!-- カテゴリ管理ボタン -->
+                    <button id="categoryManageBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md transition font-medium text-sm">
+                        🏷️ カテゴリ管理
+                    </button>
                     <!-- 管理者ログインボタン -->
                     <button id="adminBtn" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-md transition font-medium text-sm">
                         ⚙️ Admin
@@ -140,31 +186,8 @@
             <div class="flex items-center space-x-2 mb-2">
                 <span class="text-sm font-medium text-gray-700">カテゴリフィルタ:</span>
             </div>
-            <div class="flex flex-wrap gap-2">
-                <button class="category-filter active px-4 py-2 rounded-md text-sm font-medium bg-gray-100 text-gray-800" 
-                        data-category="all">
-                    📋 すべて
-                </button>
-                <button class="category-filter px-4 py-2 rounded-md text-sm font-medium bg-white text-gray-700" 
-                        data-category="工具類">
-                    🔧 工具類
-                </button>
-                <button class="category-filter px-4 py-2 rounded-md text-sm font-medium bg-white text-gray-700" 
-                        data-category="電気部品">
-                    ⚡ 電気部品
-                </button>
-                <button class="category-filter px-4 py-2 rounded-md text-sm font-medium bg-white text-gray-700" 
-                        data-category="建材">
-                    🏗️ 建材
-                </button>
-                <button class="category-filter px-4 py-2 rounded-md text-sm font-medium bg-white text-gray-700" 
-                        data-category="塗料・接着剤">
-                    🎨 塗料・接着剤
-                </button>
-                <button class="category-filter px-4 py-2 rounded-md text-sm font-medium bg-white text-gray-700" 
-                        data-category="その他">
-                    📦 その他
-                </button>
+            <div id="categoryFilters" class="flex flex-wrap gap-2">
+                <!-- 動的に生成 -->
             </div>
         </div>
     </div>
@@ -214,7 +237,7 @@
 
     <!-- 登録モーダル -->
     <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 max-h-screen overflow-y-auto">
             <div class="px-6 py-4 border-b border-gray-200">
                 <h2 class="text-lg font-semibold text-gray-900">新規資材登録</h2>
                 <button id="closeModal" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl">&times;</button>
@@ -229,15 +252,21 @@
 
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-2">カテゴリ *</label>
-                    <select id="materialCategory" required 
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">カテゴリを選択</option>
-                        <option value="工具類">🔧 工具類</option>
-                        <option value="電気部品">⚡ 電気部品</option>
-                        <option value="建材">🏗️ 建材</option>
-                        <option value="塗料・接着剤">🎨 塗料・接着剤</option>
-                        <option value="その他">📦 その他</option>
-                    </select>
+                    <div class="space-y-3">
+                        <!-- 選択されたカテゴリ表示 -->
+                        <div id="selectedCategories" class="min-h-[2rem] p-2 border border-gray-300 rounded-md bg-gray-50">
+                            <div class="text-sm text-gray-500">カテゴリを選択してください</div>
+                        </div>
+                        
+                        <!-- カテゴリ選択エリア -->
+                        <div id="categorySelector" class="category-selector hidden">
+                            <!-- 動的に生成 -->
+                        </div>
+                        
+                        <button type="button" id="toggleCategorySelector" class="text-sm text-blue-600 hover:text-blue-800">
+                            カテゴリを選択
+                        </button>
+                    </div>
                 </div>
 
                 <div class="mb-4">
@@ -271,6 +300,70 @@
         </div>
     </div>
 
+    <!-- カテゴリ管理モーダル -->
+    <div id="categoryModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-screen overflow-y-auto">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">🏷️ カテゴリ管理</h2>
+                <button id="closeCategoryModal" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+            </div>
+            
+            <div class="px-6 py-4">
+                <!-- 新規カテゴリ追加 -->
+                <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h3 class="text-lg font-medium text-blue-900 mb-3">新規カテゴリ追加</h3>
+                    <form id="categoryForm" class="space-y-3">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">カテゴリ名 *</label>
+                                <input type="text" id="categoryName" required 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">絵文字 *</label>
+                                <input type="text" id="categoryEmoji" required maxlength="2" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       placeholder="🔧">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">色 *</label>
+                                <select id="categoryColor" required 
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="">色を選択</option>
+                                    <option value="blue">青</option>
+                                    <option value="green">緑</option>
+                                    <option value="yellow">黄</option>
+                                    <option value="red">赤</option>
+                                    <option value="orange">オレンジ</option>
+                                    <option value="purple">紫</option>
+                                    <option value="pink">ピンク</option>
+                                    <option value="gray">グレー</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition font-medium">
+                            カテゴリを追加
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- 既存カテゴリ一覧 -->
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-3">既存カテゴリ</h3>
+                    <div id="categoryList" class="space-y-2">
+                        <!-- 動的に生成 -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="px-6 py-4 border-t border-gray-200">
+                <button id="closeCategoryModalBtn" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition font-medium">
+                    閉じる
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- 管理者ログインモーダル -->
     <div id="adminModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
@@ -289,7 +382,7 @@
 
                 <div class="bg-amber-50 border border-amber-200 rounded-md p-3 mb-4">
                     <p class="text-sm text-amber-800">
-                        ⚠️ 管理者モードでは資材の削除が可能になります
+                        ⚠️ 管理者モードでは資材・カテゴリの削除が可能になります
                     </p>
                 </div>
                 
@@ -316,10 +409,10 @@
             </div>
             
             <div class="px-6 py-4">
-                <p class="text-gray-700 mb-3">以下の資材を削除しますか？</p>
+                <p class="text-gray-700 mb-3">以下の項目を削除しますか？</p>
                 <div class="bg-gray-50 border border-gray-200 rounded-md p-3 mb-4">
                     <p id="deleteTargetName" class="font-medium text-gray-900"></p>
-                    <p id="deleteTargetCategory" class="text-sm text-gray-600"></p>
+                    <p id="deleteTargetInfo" class="text-sm text-gray-600"></p>
                 </div>
 
                 <div class="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
@@ -370,14 +463,14 @@
         const ADMIN_PASSWORD = "1120";
         const ADMIN_SESSION_TIMEOUT = 10 * 60 * 1000; // 10分
 
-        // カテゴリ設定
-        const categories = {
-            '工具類': { emoji: '🔧', color: 'blue' },
-            '電気部品': { emoji: '⚡', color: 'yellow' },
-            '建材': { emoji: '🏗️', color: 'green' },
-            '塗料・接着剤': { emoji: '🎨', color: 'orange' },
-            'その他': { emoji: '📦', color: 'gray' }
-        };
+        // デフォルトカテゴリ
+        const defaultCategories = [
+            { name: '工具類', emoji: '🔧', color: 'blue' },
+            { name: '電気部品', emoji: '⚡', color: 'yellow' },
+            { name: '建材', emoji: '🏗️', color: 'green' },
+            { name: '塗料・接着剤', emoji: '🎨', color: 'orange' },
+            { name: 'その他', emoji: '📦', color: 'gray' }
+        ];
 
         // DOM要素
         const addBtn = document.getElementById('addBtn');
@@ -397,7 +490,18 @@
         const materialPhoto = document.getElementById('materialPhoto');
         const imagePreview = document.getElementById('imagePreview');
         const previewImg = document.getElementById('previewImg');
-        const categoryButtons = document.querySelectorAll('.category-filter');
+        const categoryFilters = document.getElementById('categoryFilters');
+
+        // カテゴリ関連DOM要素
+        const categoryManageBtn = document.getElementById('categoryManageBtn');
+        const categoryModal = document.getElementById('categoryModal');
+        const closeCategoryModal = document.getElementById('closeCategoryModal');
+        const closeCategoryModalBtn = document.getElementById('closeCategoryModalBtn');
+        const categoryForm = document.getElementById('categoryForm');
+        const categoryList = document.getElementById('categoryList');
+        const selectedCategories = document.getElementById('selectedCategories');
+        const categorySelector = document.getElementById('categorySelector');
+        const toggleCategorySelector = document.getElementById('toggleCategorySelector');
 
         // 管理者機能DOM要素
         const adminBtn = document.getElementById('adminBtn');
@@ -416,19 +520,21 @@
         const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
         const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
         const deleteTargetName = document.getElementById('deleteTargetName');
-        const deleteTargetCategory = document.getElementById('deleteTargetCategory');
+        const deleteTargetInfo = document.getElementById('deleteTargetInfo');
 
         // 状態管理
         let materials = [];
+        let categories = [];
         let isOnline = navigator.onLine;
         let currentCategory = 'all';
         let isAdminMode = false;
         let adminTimeout = null;
-        let materialToDelete = null;
+        let itemToDelete = null;
+        let selectedCategoryIds = new Set();
 
         // 初期化
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('🏢 プロフェッショナル版で初期化中...');
+            console.log('🏢 拡張版で初期化中...');
             initApp();
             setupEventListeners();
             monitorNetworkStatus();
@@ -436,6 +542,7 @@
 
         // アプリ初期化
         function initApp() {
+            loadCategories();
             loadMaterials();
         }
 
@@ -448,16 +555,12 @@
             materialForm.addEventListener('submit', handleSubmit);
             materialPhoto.addEventListener('change', handleImagePreview);
             
-            // カテゴリフィルタのイベント
-            categoryButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    const category = button.dataset.category;
-                    filterByCategory(category);
-                    
-                    categoryButtons.forEach(btn => btn.classList.remove('active'));
-                    button.classList.add('active');
-                });
-            });
+            // カテゴリ管理
+            categoryManageBtn.addEventListener('click', openCategoryModal);
+            closeCategoryModal.addEventListener('click', closeCategoryModalHandler);
+            closeCategoryModalBtn.addEventListener('click', closeCategoryModalHandler);
+            categoryForm.addEventListener('submit', handleCategorySubmit);
+            toggleCategorySelector.addEventListener('click', toggleCategorySelectorHandler);
 
             // 管理者機能
             adminBtn.addEventListener('click', openAdminModal);
@@ -472,12 +575,13 @@
             confirmDeleteBtn.addEventListener('click', confirmDelete);
             
             // モーダル外クリック
-            [modal, adminModal, deleteModal].forEach(modalEl => {
+            [modal, adminModal, deleteModal, categoryModal].forEach(modalEl => {
                 modalEl.addEventListener('click', (e) => {
                     if (e.target === modalEl) {
                         if (modalEl === modal) closeModalHandler();
                         else if (modalEl === adminModal) closeAdminModalHandler();
                         else if (modalEl === deleteModal) closeDeleteModalHandler();
+                        else if (modalEl === categoryModal) closeCategoryModalHandler();
                     }
                 });
             });
@@ -498,21 +602,69 @@
             });
         }
 
-        // 資材データ読み込み（リアルタイム）- 登録順で固定
+        // カテゴリデータ読み込み
+        function loadCategories() {
+            db.collection('categories')
+                .orderBy('createdAt', 'asc')
+                .onSnapshot((snapshot) => {
+                    categories = [];
+                    snapshot.forEach((doc) => {
+                        categories.push({ id: doc.id, ...doc.data() });
+                    });
+                    
+                    // デフォルトカテゴリが存在しない場合は作成
+                    if (categories.length === 0) {
+                        initializeDefaultCategories();
+                    } else {
+                        renderCategoryFilters();
+                        renderCategorySelector();
+                        renderCategoryList();
+                    }
+                    
+                    console.log('🏷️ カテゴリを読み込みました:', categories.length, '件');
+                }, (error) => {
+                    console.error('❌ カテゴリ読み込みエラー:', error);
+                });
+        }
+
+        // デフォルトカテゴリ初期化
+        async function initializeDefaultCategories() {
+            console.log('🏷️ デフォルトカテゴリを作成中...');
+            
+            for (const category of defaultCategories) {
+                try {
+                    await db.collection('categories').add({
+                        ...category,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                } catch (error) {
+                    console.error('❌ デフォルトカテゴリ作成エラー:', error);
+                }
+            }
+        }
+
+        // 資材データ読み込み（リアルタイム）
         function loadMaterials() {
             db.collection('materials')
-                .orderBy('createdAt', 'asc')  // 登録順で固定
+                .orderBy('createdAt', 'asc')
                 .onSnapshot((snapshot) => {
                     materials = [];
                     snapshot.forEach((doc) => {
                         const data = doc.data();
                         
+                        // データ移行：category -> categories（文字列から配列へ）
+                        if (data.category && !data.categories) {
+                            data.categories = data.category;
+                        }
+                        
                         // データ移行：inStock -> quantity
                         if (data.inStock !== undefined && data.quantity === undefined) {
                             data.quantity = data.inStock ? 1 : 0;
                         }
-                        if (!data.category) {
-                            data.category = 'その他';
+                        
+                        // カテゴリがない場合はデフォルト設定
+                        if (!data.categories) {
+                            data.categories = 'その他';
                         }
                         
                         materials.push({ id: doc.id, ...data });
@@ -529,11 +681,131 @@
                 });
         }
 
+        // カテゴリフィルタ表示
+        function renderCategoryFilters() {
+            const allButton = `
+                <button class="category-filter active px-4 py-2 rounded-md text-sm font-medium bg-gray-100 text-gray-800" 
+                        data-category="all">
+                    📋 すべて
+                </button>
+            `;
+            
+            const categoryButtons = categories.map(category => `
+                <button class="category-filter px-4 py-2 rounded-md text-sm font-medium bg-white text-gray-700" 
+                        data-category="${category.name}">
+                    ${category.emoji} ${category.name}
+                </button>
+            `).join('');
+            
+            categoryFilters.innerHTML = allButton + categoryButtons;
+            
+            // イベントリスナー追加
+            categoryFilters.querySelectorAll('.category-filter').forEach(button => {
+                button.addEventListener('click', () => {
+                    const category = button.dataset.category;
+                    filterByCategory(category);
+                    
+                    categoryFilters.querySelectorAll('.category-filter').forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                });
+            });
+        }
+
+        // カテゴリセレクター表示
+        function renderCategorySelector() {
+            categorySelector.innerHTML = categories.map(category => `
+                <div class="category-option" data-category-id="${category.id}">
+                    <span>${category.emoji} ${category.name}</span>
+                </div>
+            `).join('');
+            
+            // イベントリスナー追加
+            categorySelector.querySelectorAll('.category-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    const categoryId = option.dataset.categoryId;
+                    toggleCategorySelection(categoryId);
+                });
+            });
+        }
+
+        // カテゴリ一覧表示（管理用）
+        function renderCategoryList() {
+            categoryList.innerHTML = categories.map(category => `
+                <div class="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-md">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-2xl">${category.emoji}</span>
+                        <div>
+                            <span class="font-medium text-gray-900">${category.name}</span>
+                            <span class="text-sm text-gray-500 ml-2">${category.color}</span>
+                        </div>
+                    </div>
+                    ${isAdminMode ? `
+                        <button class="delete-btn text-white px-3 py-1 rounded text-sm font-medium hover:scale-105 transition"
+                                onclick="openDeleteModal('${category.id}', '${category.name}', 'category')">
+                            🗑️ 削除
+                        </button>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        // カテゴリセレクター表示切り替え
+        function toggleCategorySelectorHandler() {
+            const isHidden = categorySelector.classList.contains('hidden');
+            if (isHidden) {
+                categorySelector.classList.remove('hidden');
+                toggleCategorySelector.textContent = 'カテゴリ選択を閉じる';
+            } else {
+                categorySelector.classList.add('hidden');
+                toggleCategorySelector.textContent = 'カテゴリを選択';
+            }
+        }
+
+        // カテゴリ選択切り替え
+        function toggleCategorySelection(categoryId) {
+            const option = categorySelector.querySelector(`[data-category-id="${categoryId}"]`);
+            
+            if (selectedCategoryIds.has(categoryId)) {
+                selectedCategoryIds.delete(categoryId);
+                option.classList.remove('selected');
+            } else {
+                selectedCategoryIds.add(categoryId);
+                option.classList.add('selected');
+            }
+            
+            updateSelectedCategoriesDisplay();
+        }
+
+        // 選択されたカテゴリ表示更新
+        function updateSelectedCategoriesDisplay() {
+            if (selectedCategoryIds.size === 0) {
+                selectedCategories.innerHTML = '<div class="text-sm text-gray-500">カテゴリを選択してください</div>';
+                return;
+            }
+            
+            const selectedCategoryTags = Array.from(selectedCategoryIds).map(categoryId => {
+                const category = categories.find(c => c.id === categoryId);
+                if (!category) return '';
+                
+                return `
+                    <span class="category-tag removable">
+                        ${category.emoji} ${category.name}
+                        <span class="remove-btn" onclick="toggleCategorySelection('${categoryId}')">&times;</span>
+                    </span>
+                `;
+            }).join('');
+            
+            selectedCategories.innerHTML = selectedCategoryTags;
+        }
+
         // 統計情報更新
         function updateStats() {
             let filteredMaterials = materials;
             if (currentCategory !== 'all') {
-                filteredMaterials = materials.filter(material => material.category === currentCategory);
+                filteredMaterials = materials.filter(material => {
+                    const materialCategories = getMaterialCategories(material);
+                    return materialCategories.includes(currentCategory);
+                });
             }
 
             const total = filteredMaterials.length;
@@ -551,6 +823,20 @@
             }
         }
 
+        // 資材のカテゴリ取得（互換性対応）
+        function getMaterialCategories(material) {
+            if (typeof material.categories === 'string') {
+                // 旧形式（単一カテゴリ文字列）
+                return [material.categories];
+            } else if (Array.isArray(material.categories)) {
+                // 新形式（複数カテゴリ配列）
+                return material.categories;
+            } else {
+                // フォールバック
+                return ['その他'];
+            }
+        }
+
         // カテゴリフィルタ
         function filterByCategory(category) {
             currentCategory = category;
@@ -562,7 +848,10 @@
         function renderMaterials() {
             let filteredMaterials = materials;
             if (currentCategory !== 'all') {
-                filteredMaterials = materials.filter(material => material.category === currentCategory);
+                filteredMaterials = materials.filter(material => {
+                    const materialCategories = getMaterialCategories(material);
+                    return materialCategories.includes(currentCategory);
+                });
             }
 
             if (filteredMaterials.length === 0) {
@@ -586,28 +875,43 @@
             materialsGrid.classList.remove('hidden');
             
             materialsGrid.innerHTML = filteredMaterials.map(material => {
-                const categoryInfo = categories[material.category] || categories['その他'];
+                const materialCategories = getMaterialCategories(material);
                 const quantity = material.quantity || 0;
                 const isInStock = quantity > 0;
+                
+                // カテゴリタグ生成
+                const categoryTags = materialCategories.map(categoryName => {
+                    const categoryInfo = categories.find(c => c.name === categoryName) || 
+                                        { emoji: '📦', color: 'gray' };
+                    return `
+                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-white text-gray-700 border mr-1 mb-1">
+                            ${categoryInfo.emoji} ${categoryName}
+                        </span>
+                    `;
+                }).join('');
+                
+                // メインカテゴリの絵文字（表示用）
+                const mainCategory = categories.find(c => c.name === materialCategories[0]) || 
+                                   { emoji: '📦', color: 'gray' };
                 
                 return `
                     <div class="material-card bg-white rounded-lg overflow-hidden">
                         <div class="aspect-square bg-gray-100 relative">
                             ${material.photoBase64 ? 
                                 `<img src="${material.photoBase64}" alt="${material.name}" class="w-full h-full object-cover">` :
-                                `<div class="w-full h-full flex items-center justify-center text-gray-400 text-4xl">${categoryInfo.emoji}</div>`
+                                `<div class="w-full h-full flex items-center justify-center text-gray-400 text-4xl">${mainCategory.emoji}</div>`
                             }
                             <!-- カテゴリバッジ -->
                             <div class="absolute top-2 left-2">
-                                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-white text-gray-700 border">
-                                    ${categoryInfo.emoji} ${material.category}
-                                </span>
+                                <div class="flex flex-wrap">
+                                    ${categoryTags}
+                                </div>
                             </div>
                             <!-- 削除ボタン（管理者モードのみ） -->
                             ${isAdminMode ? `
                                 <div class="absolute top-2 right-2">
                                     <button class="delete-btn text-white px-2 py-1 rounded text-xs font-medium hover:scale-105 transition"
-                                            onclick="openDeleteModal('${material.id}', '${material.name}', '${material.category}')">
+                                            onclick="openDeleteModal('${material.id}', '${material.name}', 'material')">
                                         🗑️
                                     </button>
                                 </div>
@@ -755,20 +1059,20 @@
         let usageAmounts = {};
         let restockAmounts = {};
 
+        // 以下、既存の関数群を継続...
+        
         // 使用数量：数字をディスプレイに追加
         window.addToUsage = function(materialId, digit) {
             if (!usageAmounts[materialId]) {
                 usageAmounts[materialId] = '';
             }
             
-            // 最初の0は無視（例：0 + 5 = 5）
             if (usageAmounts[materialId] === '0') {
                 usageAmounts[materialId] = '';
             }
             
             usageAmounts[materialId] += digit.toString();
             
-            // 在庫数を超えないようにチェック
             const material = materials.find(m => m.id === materialId);
             const maxQuantity = material ? material.quantity || 0 : 0;
             const currentAmount = parseInt(usageAmounts[materialId]) || 0;
@@ -778,27 +1082,6 @@
                 showError(`在庫数（${maxQuantity}個）を超えています`);
             }
             
-            updateUsageDisplay(materialId);
-        };
-
-        // 補充数量：数字をディスプレイに追加
-        window.addToRestock = function(materialId, digit) {
-            if (!restockAmounts[materialId]) {
-                restockAmounts[materialId] = '';
-            }
-            
-            // 最初の0は無視（例：0 + 5 = 5）
-            if (restockAmounts[materialId] === '0') {
-                restockAmounts[materialId] = '';
-            }
-            
-            restockAmounts[materialId] += digit.toString();
-            updateRestockDisplay(materialId);
-        };
-
-        // 使用数量をクリア
-        window.clearUsage = function(materialId) {
-            usageAmounts[materialId] = '';
             updateUsageDisplay(materialId);
         };
 
@@ -856,7 +1139,6 @@
                 return;
             }
 
-            // 現在の在庫数を取得
             const material = materials.find(m => m.id === materialId);
             if (!material) return;
 
@@ -869,18 +1151,15 @@
 
             const newQuantity = currentQuantity - usageAmount;
             
-            // 在庫数を更新
             db.collection('materials').doc(materialId).update({
                 quantity: newQuantity
             }).then(() => {
                 console.log(`📝 ${usageAmount}個使用: ${materialId} (${currentQuantity} → ${newQuantity})`);
                 showSuccess(`${usageAmount}個使用しました`);
                 
-                // 使用数量をリセット
                 usageAmounts[materialId] = '';
                 updateUsageDisplay(materialId);
                 
-                // 管理者モードの場合はセッション延長
                 if (isAdminMode) {
                     setAdminTimeout();
                 }
@@ -904,25 +1183,21 @@
                 return;
             }
 
-            // 現在の在庫数を取得
             const material = materials.find(m => m.id === materialId);
             if (!material) return;
 
             const currentQuantity = material.quantity || 0;
             const newQuantity = currentQuantity + restockAmount;
             
-            // 在庫数を更新
             db.collection('materials').doc(materialId).update({
                 quantity: newQuantity
             }).then(() => {
                 console.log(`📦 ${restockAmount}個補充: ${materialId} (${currentQuantity} → ${newQuantity})`);
-                showSuccess(`${restockAmount}個補充ました`);
+                showSuccess(`${restockAmount}個補充しました`);
                 
-                // 補充数量をリセット
                 restockAmounts[materialId] = '';
                 updateRestockDisplay(materialId);
                 
-                // 管理者モードの場合はセッション延長
                 if (isAdminMode) {
                     setAdminTimeout();
                 }
@@ -943,7 +1218,7 @@
             updateQuantity(materialId, newQuantity);
         };
 
-        // 在庫数更新（updatedAtは更新しない）
+        // 在庫数更新
         window.updateQuantity = function(materialId, newQuantity) {
             if (!isOnline) {
                 showError('オフライン中は編集できません');
@@ -952,13 +1227,11 @@
 
             if (newQuantity < 0) newQuantity = 0;
 
-            // updatedAtを更新せずに在庫数のみ更新
             db.collection('materials').doc(materialId).update({
                 quantity: newQuantity
             }).then(() => {
                 console.log(`📝 在庫数を更新: ${materialId} -> ${newQuantity}`);
                 
-                // 管理者モードの場合はセッション延長
                 if (isAdminMode) {
                     setAdminTimeout();
                 }
@@ -967,6 +1240,53 @@
                 showError('在庫数の更新に失敗しました');
             });
         };
+
+        // カテゴリ追加処理
+        function handleCategorySubmit(e) {
+            e.preventDefault();
+            
+            if (!isOnline) {
+                showError('オフライン中は追加できません');
+                return;
+            }
+            
+            const name = document.getElementById('categoryName').value.trim();
+            const emoji = document.getElementById('categoryEmoji').value.trim();
+            const color = document.getElementById('categoryColor').value;
+            
+            if (!name || !emoji || !color) return;
+            
+            // 重複チェック
+            if (categories.some(cat => cat.name === name)) {
+                showError('同じ名前のカテゴリが既に存在します');
+                return;
+            }
+            
+            const submitBtn = categoryForm.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '追加中...';
+            
+            db.collection('categories').add({
+                name,
+                emoji,
+                color,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                console.log('🏷️ カテゴリを追加しました:', name);
+                showSuccess(`カテゴリ「${name}」を追加しました`);
+                categoryForm.reset();
+                
+                if (isAdminMode) {
+                    setAdminTimeout();
+                }
+            }).catch((error) => {
+                console.error('❌ カテゴリ追加エラー:', error);
+                showError('カテゴリの追加に失敗しました: ' + error.message);
+            }).finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'カテゴリを追加';
+            });
+        }
 
         // 管理者ログイン
         function handleAdminLogin(e) {
@@ -977,16 +1297,14 @@
                 isAdminMode = true;
                 closeAdminModalHandler();
                 
-                // UI更新
                 adminBtn.classList.add('hidden');
                 adminStatus.classList.remove('hidden');
                 adminStatus.classList.add('flex', 'admin-mode');
                 
-                // 自動ログアウト設定
                 setAdminTimeout();
                 
-                // 画面を再描画して削除ボタンを表示
                 renderMaterials();
+                renderCategoryList();
                 
                 console.log('🔐 管理者モードを開始');
                 showSuccess('管理者モードが有効になりました');
@@ -1001,13 +1319,12 @@
             isAdminMode = false;
             clearAdminTimeout();
             
-            // UI更新
             adminBtn.classList.remove('hidden');
             adminStatus.classList.add('hidden');
             adminStatus.classList.remove('flex', 'admin-mode');
             
-            // 画面を再描画して削除ボタンを非表示
             renderMaterials();
+            renderCategoryList();
             
             console.log('🔐 管理者モードを終了');
             showSuccess('管理者モードを終了しました');
@@ -1031,15 +1348,24 @@
         }
 
         // 削除モーダル開く
-        window.openDeleteModal = function(materialId, materialName, materialCategory) {
+        window.openDeleteModal = function(itemId, itemName, itemType) {
             if (!isAdminMode) {
                 showError('管理者権限が必要です');
                 return;
             }
             
-            materialToDelete = { id: materialId, name: materialName, category: materialCategory };
-            deleteTargetName.textContent = materialName;
-            deleteTargetCategory.textContent = `カテゴリ: ${materialCategory}`;
+            itemToDelete = { id: itemId, name: itemName, type: itemType };
+            deleteTargetName.textContent = itemName;
+            
+            if (itemType === 'category') {
+                deleteTargetInfo.textContent = 'タイプ: カテゴリ';
+            } else {
+                const material = materials.find(m => m.id === itemId);
+                if (material) {
+                    const materialCategories = getMaterialCategories(material);
+                    deleteTargetInfo.textContent = `カテゴリ: ${materialCategories.join(', ')}`;
+                }
+            }
             
             deleteModal.classList.remove('hidden');
             deleteModal.classList.add('flex');
@@ -1047,7 +1373,7 @@
 
         // 削除実行
         function confirmDelete() {
-            if (!materialToDelete || !isAdminMode) return;
+            if (!itemToDelete || !isAdminMode) return;
             
             if (!isOnline) {
                 showError('オフライン中は削除できません');
@@ -1057,13 +1383,14 @@
             confirmDeleteBtn.disabled = true;
             confirmDeleteBtn.textContent = '削除中...';
             
-            db.collection('materials').doc(materialToDelete.id).delete()
+            const collection = itemToDelete.type === 'category' ? 'categories' : 'materials';
+            
+            db.collection(collection).doc(itemToDelete.id).delete()
                 .then(() => {
-                    console.log('🗑️ 資材を削除しました:', materialToDelete.name);
-                    showSuccess(`「${materialToDelete.name}」を削除しました`);
+                    console.log(`🗑️ ${itemToDelete.type}を削除しました:`, itemToDelete.name);
+                    showSuccess(`「${itemToDelete.name}」を削除しました`);
                     closeDeleteModalHandler();
                     
-                    // 管理者セッションを延長
                     setAdminTimeout();
                 })
                 .catch((error) => {
@@ -1076,8 +1403,78 @@
                 });
         }
 
+        // フォーム送信処理（資材登録）
+        async function handleSubmit(e) {
+            e.preventDefault();
+            
+            if (!isOnline) {
+                showError('オフライン中は登録できません');
+                return;
+            }
+            
+            if (selectedCategoryIds.size === 0) {
+                showError('カテゴリを少なくとも1つ選択してください');
+                return;
+            }
+            
+            const name = document.getElementById('materialName').value.trim();
+            const quantity = parseInt(document.getElementById('materialQuantity').value) || 0;
+            const photoFile = materialPhoto.files[0];
+            
+            if (!name) return;
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '登録中...';
+            
+            try {
+                let photoBase64 = '';
+                
+                if (photoFile) {
+                    console.log('📸 画像をリサイズ中...');
+                    const resizedFile = await resizeImage(photoFile, 800);
+                    photoBase64 = await fileToBase64(resizedFile);
+                }
+                
+                // 選択されたカテゴリ名の配列を作成
+                const selectedCategoryNames = Array.from(selectedCategoryIds).map(categoryId => {
+                    const category = categories.find(c => c.id === categoryId);
+                    return category ? category.name : null;
+                }).filter(name => name !== null);
+                
+                console.log('💾 Firestoreに保存中...');
+                await db.collection('materials').add({
+                    name,
+                    categories: selectedCategoryNames, // 配列として保存
+                    quantity,
+                    photoBase64,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                console.log('✅ 資材を登録しました:', name, `(${selectedCategoryNames.join(', ')}, ${quantity}個)`);
+                closeModalHandler();
+                showSuccess(`「${name}」を登録しました`);
+                
+                if (isAdminMode) {
+                    setAdminTimeout();
+                }
+                
+            } catch (error) {
+                console.error('❌ 登録エラー:', error);
+                showError('資材の登録に失敗しました: ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '登録';
+            }
+        }
+
         // モーダル開閉処理
         function openModal() {
+            selectedCategoryIds.clear();
+            updateSelectedCategoriesDisplay();
+            renderCategorySelector();
+            
             modal.classList.remove('hidden');
             modal.classList.add('flex');
             document.getElementById('materialName').focus();
@@ -1088,6 +1485,20 @@
             modal.classList.remove('flex');
             materialForm.reset();
             imagePreview.classList.add('hidden');
+            categorySelector.classList.add('hidden');
+            toggleCategorySelector.textContent = 'カテゴリを選択';
+            selectedCategoryIds.clear();
+        }
+
+        function openCategoryModal() {
+            categoryModal.classList.remove('hidden');
+            categoryModal.classList.add('flex');
+        }
+
+        function closeCategoryModalHandler() {
+            categoryModal.classList.add('hidden');
+            categoryModal.classList.remove('flex');
+            categoryForm.reset();
         }
 
         function openAdminModal() {
@@ -1105,7 +1516,7 @@
         function closeDeleteModalHandler() {
             deleteModal.classList.add('hidden');
             deleteModal.classList.remove('flex');
-            materialToDelete = null;
+            itemToDelete = null;
         }
 
         // 画像プレビュー
@@ -1127,63 +1538,6 @@
                 reader.readAsDataURL(file);
             } else {
                 imagePreview.classList.add('hidden');
-            }
-        }
-
-        // フォーム送信処理
-        async function handleSubmit(e) {
-            e.preventDefault();
-            
-            if (!isOnline) {
-                showError('オフライン中は登録できません');
-                return;
-            }
-            
-            const name = document.getElementById('materialName').value.trim();
-            const category = document.getElementById('materialCategory').value;
-            const quantity = parseInt(document.getElementById('materialQuantity').value) || 0;
-            const photoFile = materialPhoto.files[0];
-            
-            if (!name || !category) return;
-            
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
-            submitBtn.textContent = '登録中...';
-            
-            try {
-                let photoBase64 = '';
-                
-                if (photoFile) {
-                    console.log('📸 画像をリサイズ中...');
-                    const resizedFile = await resizeImage(photoFile, 800);
-                    photoBase64 = await fileToBase64(resizedFile);
-                }
-                
-                console.log('💾 Firestoreに保存中...');
-                await db.collection('materials').add({
-                    name,
-                    category,
-                    quantity,
-                    photoBase64,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                
-                console.log('✅ 資材を登録しました:', name, `(${category}, ${quantity}個)`);
-                closeModalHandler();
-                showSuccess(`「${name}」を登録しました`);
-                
-                // 管理者モードの場合はセッション延長
-                if (isAdminMode) {
-                    setAdminTimeout();
-                }
-                
-            } catch (error) {
-                console.error('❌ 登録エラー:', error);
-                showError('資材の登録に失敗しました: ' + error.message);
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = '登録';
             }
         }
 
@@ -1243,7 +1597,27 @@
             }, 3000);
         }
 
-        console.log('🏢 プロフェッショナル版で起動しました');
+        console.log('🏢 拡張版で起動しました');
     </script>
 </body>
-</html>
+</html>：数字をディスプレイに追加
+        window.addToRestock = function(materialId, digit) {
+            if (!restockAmounts[materialId]) {
+                restockAmounts[materialId] = '';
+            }
+            
+            if (restockAmounts[materialId] === '0') {
+                restockAmounts[materialId] = '';
+            }
+            
+            restockAmounts[materialId] += digit.toString();
+            updateRestockDisplay(materialId);
+        };
+
+        // 使用数量をクリア
+        window.clearUsage = function(materialId) {
+            usageAmounts[materialId] = '';
+            updateUsageDisplay(materialId);
+        };
+
+        // 補充数量
